@@ -1,6 +1,6 @@
 package com.jguru.veretxai.utils;
 
-import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.responses.GenerateContentResponse;
 import com.jguru.veretxai.client.VertexAiClient;
 
 import java.io.IOException;
@@ -13,15 +13,15 @@ public class VertexUtils {
     public static String generateContent(String apiKey, String modelName, String text) throws IOException {
         VertexAiClient client = new VertexAiClient(apiKey);
         GenerateContentResponse response = client.callVertexAi(modelName, text);
-        return response.text();
+        return response.getText();
     }
 
     /**
      * Generates content using Service Account authentication.
      */
-    public static String generateContent(String serviceAccountKeyPath, String projectId, String location, String modelName, String text) throws IOException {
-        VertexAiClient client = new VertexAiClient(serviceAccountKeyPath, projectId, location);
+    public static String generateContent(String projectId, String location, String modelName, String text) throws IOException {
+        VertexAiClient client = new VertexAiClient(projectId, location);
         GenerateContentResponse response = client.callVertexAi(modelName, text);
-        return response.text();
+        return response.getText();
     }
 }

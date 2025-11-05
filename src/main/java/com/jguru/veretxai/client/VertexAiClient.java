@@ -1,42 +1,38 @@
 package com.jguru.veretxai.client;
 
-import com.google.cloud.vertexai.VertexAI;
-import com.google.cloud.vertexai.generativeai.ContentMaker;
-import com.google.cloud.vertexai.generativeai.GenerativeModel;
-import com.google.cloud.vertexai.generativeai.ResponseHandler;
+import com.google.genai.client.Client;
+import com.google.genai.client.GenerativeModel;
+import com.google.genai.responses.GenerateContentResponse;
 
 import java.io.IOException;
 
 public class VertexAiClient {
 
-    private final GenerativeModel vertexAiModel;
-    private com.google.generativeai.client.GenerativeModel generativeModel;
-    private final boolean isServiceAccount;
+    private final Client client;
 
     /**
-     * Constructor for API Key authentication.
+     * Constructor for API Key authentication (Vertex AI Express Mode).
      */
-    public VertexAiClient(String apiKey, String modelName) {
-        this.generativeModel = new com.google.generativeai.client.GenerativeModel(modelName, apiKey);
-        this.vertexAiModel = null;
-        this.isServiceAccount = false;
+    public VertexAiClient(String apiKey) {
+        this.client = new Client.builder()
+                .setApiKey(apiKey)
+                .setVertexAI(true)
+                .build();
     }
 
     /**
-     * Constructor for Service Account authentication.
+     * Constructor for Service Account authentication (via ADC).
      */
-    public VertexAiClient(String projectId, String location, String modelName) throws IOException {
-        VertexAI vertexAI = new VertexAI(projectId, location);
-        this.vertexAiModel = new GenerativeModel(modelName, vertexAI);
-        this.generativeModel = null;
-        this.isServiceAccount = true;
+    public VertexAiClient(String projectId, String location) {
+         this.client = new Client.builder()
+                .setProject(projectId)
+                .setLocation(location)
+                .setVertexAI(true)
+                .build();
     }
 
-    public String callVertexAi(String text) throws IOException {
-        if (isServiceAccount) {
-            return ResponseHandler.getText(vertexAiModel.generateContent(ContentMaker.fromString(text)));
-        } else {
-            return generativeModel.generateContent(text).getText();
-        }
+    public GenerateContentResponse callVertexAi(String modelName, String text) throws IOException {
+        GenerativeModel model = this.client.getGenerativeModel(modelName);
+        return model.generateContent(text);
     }
 }
