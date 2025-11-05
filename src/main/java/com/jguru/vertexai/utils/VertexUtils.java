@@ -1,7 +1,7 @@
-package com.jguru.veretxai.utils;
+package com.jguru.vertexai.utils;
 
 import com.google.genai.types.GenerateContentResponse;
-import com.jguru.veretxai.client.VertexAiClient;
+import com.jguru.vertexai.client.VertexAiClient;
 
 import java.io.IOException;
 

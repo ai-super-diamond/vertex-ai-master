@@ -1,6 +1,6 @@
-package com.jguru.veretxai;
+package com.jguru.vertexai;
 
-import com.jguru.veretxai.utils.VertexUtils;
+import com.jguru.vertexai.utils.VertexUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;

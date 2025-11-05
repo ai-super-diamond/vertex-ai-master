@@ -16,7 +16,7 @@
     <google.genai.version>1.25.0</google.genai.version>
     <junit.version>5.10.2</junit.version>
     <assertj.version>3.25.3</assertj.version>
-    <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+    <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
   </properties>
 
   <dependencyManagement>
@@ -100,7 +100,7 @@
             <configuration>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.jguru.veretxai.VertexAiMasterMain</mainClass>
+                  <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
                 </transformer>
               </transformers>
             </configuration>
@@ -128,7 +128,7 @@
               </execution>
             </executions>
             <configuration>
-              <mainClass>com.jguru.veretxai.VertexAiMasterMain</mainClass>
+              <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
             </configuration>
           </plugin>
         </plugins>
