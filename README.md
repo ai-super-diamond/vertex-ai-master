@@ -6,17 +6,25 @@ A command-line interface (CLI) for interacting with Google's Vertex AI generativ
 
 Before you begin, ensure you have the following installed and configured:
 
-1.  **Java Development Kit (JDK) 17:** This project requires Java 17. You can verify your installation by running `java -version`.
+1.  **Java Development Kit (JDK) 25:** This project requires Java 25. You can verify your installation by running `java -version`.
 2.  **Apache Maven:** Used for project build and dependency management. Verify your installation with `mvn -v`.
 3.  **Google Cloud SDK (gcloud):** While not strictly required to run the final executable, it is essential for managing your Google Cloud project and authentication. [Installation Guide](https://cloud.google.com/sdk/docs/install).
 4.  **Google Cloud Project:** You need a Google Cloud project with the Vertex AI API enabled.
 5.  **Service Account Key:**
     *   Create a service account in your Google Cloud project with the "Vertex AI User" role.
     *   Download the JSON key file for this service account.
-6.  **GraalVM (for native executable):** To build the native Windows executable, you need GraalVM for JDK 17.
+6.  **GraalVM (for native executable):** To build the native Windows executable, you need GraalVM for JDK 25.
     *   [Download GraalVM](https://www.graalvm.org/downloads/).
     *   Set the `GRAALVM_HOME` environment variable to your GraalVM installation directory.
     *   Ensure the GraalVM `bin` directory is in your system's `PATH`.
+
+## Model Context Protocol (MCP)
+* when you need up-to-date information use MCP: **serper**
+* when you need documentation use MCP: **context7**
+* for sophisticated answers use MCP: **exa**
+* for complex tasks use MCP: **sequential-thinking**
+
+IMPORTANT: Test the tools of MCP servers and create your own rubric how and when to use and which one to use.
 
 ## Configuration
 

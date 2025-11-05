@@ -23,9 +23,6 @@ public class VertexAiMasterMain implements Callable<Integer> {
     }
 
     static class ServiceAccountAuth {
-        @Option(names = "--sa-key-path", description = "The path to the service account JSON key file.", required = true)
-        String serviceAccountKeyPath;
-
         @Option(names = "--project-id", description = "Your Google Cloud project ID.", required = true)
         String projectId;
 
@@ -57,7 +54,6 @@ public class VertexAiMasterMain implements Callable<Integer> {
             response = VertexUtils.generateContent(auth.apiKeyAuth.apiKey, modelName, text);
         } else if (auth.saAuth != null) {
             response = VertexUtils.generateContent(
-                    auth.saAuth.serviceAccountKeyPath,
                     auth.saAuth.projectId,
                     auth.saAuth.location,
                     modelName,
