@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "my-kilo-vertex-v3-project",
+  "private_key_id": "02ffcf513c99a17651a579967adf616593ba8a3c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC9wVMBghcVe8hp\nknb6FIs98x1QSEmB50axr17Jle857luwGaex23GD+Ke8LnRVOFpGOxwyW7h9e8Al\nOL3oe55U533lkhB470/s9xtHYp2oXzGvY9Aompwpy3QqnJUaDaWn89EZQu1SYYqb\nFpErvECIBSJeaRcDnqKWfuRtOM3WPKeiiVTE9HtyTBVlzvjgTHGILluf4kZsX1o8\nNpv8c9IBJN/vRLVT1rPj18CIjxbeo4PDV2qlgY8VPLSlIMwQKqc+EjgMHLEEBm2O\nDK5UtrIp1fvSbCdOaXLeM35Fmq47T4qu64bxJW1RaGAX805d6rH0nSngmFpBJp30\nHkRxbc3XAgMBAAECggEAIShzFMRivEJRFwGdAL4uRrkA2lKHZcfANrRqX9dvYjQg\nmXkiMJYkE+eTh/KmKW4beEJD/xi/+E1zmg18Qe+4DyYUfdU0Q62tzb6waZz158Ia\nsIdEjJPXzgXbWsbZ1x+jXuHgHAXx6n9Y9RjQbVAMBri+9LhwaRWDW8D4sY1HirPp\nnxnE4uMg+eCECo+v1fKO6yppnYMn80WDSyx0KnRbCFFnSn8wP3dHZFWKS5RKTLs0\nvZwEKPmYQINfMbb2ErjUbonL9I5Lh8CkIRq66sQ4+3naW8hhfdnCFF1McugoJuka\nwZ/DtmhzHsyRMLRG1yskLHV9AADuHgL2oHRhRQc0AQKBgQDefuSOgR1YEopn/Yv3\ntehrJXaWhWt0L2SQOtDouf5mV7L9Sslw6llJLkUFWjlub5zga6eq5V4OBdl7mFIu\nDFgIfzWZBfd5ejcf8qIjIBl+jV8Mh5/whUThD3ad0MPjFcuQ46Ou6QEzc8iqzROJ\nZDJISdeknwpFtnhcg2dzQLXGVwKBgQDaVEzJ6poot3DkJqLOQD6KPJi5kf89CXFj\nQBWCGtXeMIsy8OCaurDbYgmB1wGQcnrB56FnHc7jdfT6hgIJXePOmP0c9aR0eYg4\nMo5PWjA1URzC/o2u6XBlf7UUUEEKpzsnPwTXRJVkto5FrAmJhpjGIgQrRP/FV5l/\nJpwh5vCEgQKBgQCooZYKp7Mc2FiMPm/CG93+r1M0/AQX9/+JDPrfGHDHEnr3XKJW\ncVegjnADgYF7wR4uPYnDjbn+eNJ/yU+n1PU342o1A3+wUz/Kd/QJGUAZWX6LmZNQ\nEUHGLhkhvWNqDk/ODao2XCTr4Tpasbm37PfrMAQ/ocaAVa7dtz5F7OqYWwKBgC7m\nOPCO4rqoXSnFWuevST/ssGn8gLWd16uYUoZ2OUbXaq9wqu7R97fIoX4wr3dWACSz\nGyrJbm3SIuPF8Z4NeyggGQ8lfUQ/7xETWxqUpxJs8B67C7htEOXcvws0CiS9s6lE\nkkejxeuyg3FX+Vx/e0XkfLzGv6KmpKR5qMRnlXcBAoGBAInIef3OqJjU1N29GCon\ncVcsXcparzGx0gUdUyOCjOjA+36XF8b/EJRGaa+S5+Ks3u/FSAq9ISaHdGp0nuEA\nYgMdGHgKfuV/fdKPMMtU+QphNeCUkfsk3QJ8tmDb/R8nT13OQ+WRgQiLC6BVlv7e\ni1C7PvAqfBTT23XIe/P+9BAN\n-----END PRIVATE KEY-----\n",
+  "client_email": "kilo-vertex-runner@my-kilo-vertex-v3-project.iam.gserviceaccount.com",
+  "client_id": "105799357218752694924",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/kilo-vertex-runner%40my-kilo-vertex-v3-project.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

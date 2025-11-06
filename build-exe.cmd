@@ -3,7 +3,7 @@
 echo --- Building Native Executable ---
 
 REM Activate the 'native' profile and package the application
-mvn -Pnative package
+d:\java\maven\bin\mvn -Pnative package
 
 REM Check if the executable was created
 if not exist "target\vertex.exe" (

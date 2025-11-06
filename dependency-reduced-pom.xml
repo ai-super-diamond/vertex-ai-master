@@ -26,7 +26,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
+        <version>${maven.shade.plugin.version}</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -36,12 +36,70 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.jguru.veretxai.VertexAiMasterMain</mainClass>
+                  <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
                 </transformer>
               </transformers>
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven.surefire.plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <java>
+            <eclipse>
+              <version>4.32.0</version>
+              <file>${project.basedir}/eclipse-formatter.xml</file>
+            </eclipse>
+            <removeUnusedImports />
+            <trimTrailingWhitespace />
+            <endWithNewline />
+          </java>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+              <nrOfIndentSpace>2</nrOfIndentSpace>
+            </sortPom>
+          </pom>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.5.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <configLocation>google_checks.xml</configLocation>
+          <consoleOutput>true</consoleOutput>
+          <failsOnError>false</failsOnError>
+          <violationSeverity>warning</violationSeverity>
+        </configuration>
       </plugin>
     </plugins>
   </build>
@@ -53,7 +111,7 @@
           <plugin>
             <groupId>org.graalvm.buildtools</groupId>
             <artifactId>native-maven-plugin</artifactId>
-            <version>0.9.28</version>
+            <version>0.11.2</version>
             <executions>
               <execution>
                 <id>build-native</id>
@@ -64,7 +122,7 @@
               </execution>
             </executions>
             <configuration>
-              <mainClass>com.jguru.veretxai.VertexAiMasterMain</mainClass>
+              <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
             </configuration>
           </plugin>
         </plugins>
@@ -75,7 +133,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>5.10.2</version>
+      <version>5.12.1</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -95,7 +153,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.10.2</version>
+      <version>5.12.1</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -111,7 +169,7 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
-      <version>3.25.3</version>
+      <version>3.27.0</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -121,14 +179,29 @@
       </exclusions>
     </dependency>
   </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.google.auth</groupId>
+        <artifactId>google-auth-library-bom</artifactId>
+        <version>1.40.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <properties>
-    <maven.compiler.target>17</maven.compiler.target>
-    <google.genai.version>1.25.0</google.genai.version>
-    <picocli.version>4.7.0</picocli.version>
-    <java.version>17</java.version>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
-    <assertj.version>3.25.3</assertj.version>
-    <junit.version>5.10.2</junit.version>
+    <google.genai.version>1.26.0</google.genai.version>
+    <spotless.version>2.43.0</spotless.version>
+    <java.version>21</java.version>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.shade.plugin.version>3.6.1</maven.shade.plugin.version>
+    <maven.compiler.target>21</maven.compiler.target>
+    <checkstyle.version>10.20.2</checkstyle.version>
+    <picocli.version>4.7.7</picocli.version>
+    <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
+    <assertj.version>3.27.0</assertj.version>
+    <junit.version>5.12.1</junit.version>
+    <maven.surefire.plugin.version>3.5.4</maven.surefire.plugin.version>
   </properties>
 </project>

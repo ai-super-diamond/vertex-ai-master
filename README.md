@@ -19,6 +19,15 @@ Before you begin, ensure you have the following installed and configured:
     *   Ensure the GraalVM `bin` directory is in your system's `PATH`.
 
 ## Model Context Protocol (MCP)
+
+### Local MCP configuration
+- Current MCP config file path: `c:\java\mcp-configs\qoder-mcp.json`
+- Once MCP is wired into the CLI, point the client to this file using a future `--mcp-config` flag or an environment variable like `MCP_CONFIG`.
+
+Examples (planned):
+- Using a CLI flag: `vertex-ai --mcp-config c:\\java\\mcp-configs\\qoder-mcp.json "Your prompt here"`
+- Using an env var: `set MCP_CONFIG=c:\\java\\mcp-configs\\qoder-mcp.json && vertex-ai "Your prompt here"`
+
 * when you need up-to-date information use MCP: **serper**
 * when you need documentation use MCP: **context7**
 * for sophisticated answers use MCP: **exa**
@@ -29,6 +38,8 @@ IMPORTANT: Test the tools of MCP servers and create your own rubric how and when
 ## Configuration
 
 1.  **Service Account:** The application requires credentials to authenticate with the Google Cloud API. You will need to pass the path to your service account JSON key file using the `--sa-key-file` option when running the application.
+
+    **Important:** When `--sa-key-file` is explicitly provided, the application will **NOT** fall back to Application Default Credentials (ADC) if the key file is invalid or malformed. The application will fail immediately with a clear error message. This ensures explicit credential validation and prevents unintended authentication via ADC.
 
 2.  **Models:** The available models are configured in the `src/main/resources/models.properties` file. You can add or modify the models in this file.
 
