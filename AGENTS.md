@@ -230,11 +230,11 @@ When `--sa-key-file` is explicitly provided, the application MUST:
 ### MCP Tool Integration (Planned)
 
 **Available MCP servers** (configured in `c:\java\mcp-configs\qoder-mcp.json`):
-- **serper**: Web search for current information
-- **context7**: Library documentation lookup
-- **exa**: Advanced search and context retrieval
-- **sequential-thinking**: Complex task orchestration
-- **desktop-commander**: Desktop automation and system operations
+- **serper**: Web search for current information ([marcopesani/mcp-server-serper](https://github.com/marcopesani/mcp-server-serper))
+- **context7**: Library documentation lookup ([upstash/context7](https://github.com/upstash/context7))
+- **exa**: Advanced search and context retrieval ([exa-labs/exa-mcp-server](https://github.com/exa-labs/exa-mcp-server))
+- **sequential-thinking**: Complex task orchestration ([modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking))
+- **desktop-commander**: Desktop automation and system operations ([wonderwhy-er/DesktopCommanderMCP](https://github.com/wonderwhy-er/DesktopCommanderMCP))
 
 **Tool selection rubric:**
 - Use `serper` for time-sensitive facts, current events
