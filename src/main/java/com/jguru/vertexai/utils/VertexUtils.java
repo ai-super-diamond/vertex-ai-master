@@ -19,14 +19,34 @@ import java.util.Properties;
  */
 public class VertexUtils {
 
-  // US Regions
+  // US Regions (source: https://cloud.google.com/about/locations - Nov 2025)
   public static final List<String> US_REGIONS = Arrays.asList("us-central1", "us-east1", "us-east4",
       "us-east5", "us-south1", "us-west1", "us-west2", "us-west3", "us-west4");
 
-  // Europe Regions
-  public static final List<String> EUROPE_REGIONS = Arrays.asList("europe-west1", "europe-west2",
-      "europe-west3", "europe-west4", "europe-west6", "europe-west8", "europe-west9",
-      "europe-north1", "europe-central2", "europe-southwest1");
+  // Europe Regions (source: https://cloud.google.com/about/locations - Nov 2025)
+  public static final List<String> EUROPE_REGIONS = Arrays.asList("europe-central2",
+      "europe-north1", "europe-southwest1", "europe-west1", "europe-west2", "europe-west3",
+      "europe-west4", "europe-west6", "europe-west8", "europe-west9", "europe-west12");
+
+  // Asia Pacific Regions (source: https://cloud.google.com/about/locations - Nov 2025)
+  public static final List<String> ASIA_REGIONS = Arrays.asList("asia-east1", "asia-east2",
+      "asia-northeast1", "asia-northeast2", "asia-northeast3", "asia-south1", "asia-south2",
+      "asia-southeast1", "asia-southeast2", "australia-southeast1", "australia-southeast2");
+
+  // Middle East Regions (source: https://cloud.google.com/about/locations - Nov 2025)
+  public static final List<String> MIDDLE_EAST_REGIONS = Arrays.asList("me-central1", "me-central2",
+      "me-west1");
+
+  // Africa Regions (source: https://cloud.google.com/about/locations - Nov 2025)
+  public static final List<String> AFRICA_REGIONS = Arrays.asList("africa-south1");
+
+  // North America (Canada) Regions (source: https://cloud.google.com/about/locations - Nov 2025)
+  public static final List<String> CANADA_REGIONS = Arrays.asList("northamerica-northeast1",
+      "northamerica-northeast2");
+
+  // South America Regions (source: https://cloud.google.com/about/locations - Nov 2025)
+  public static final List<String> SOUTH_AMERICA_REGIONS = Arrays.asList("southamerica-east1",
+      "southamerica-west1");
 
   private static Properties modelProperties = null;
 
