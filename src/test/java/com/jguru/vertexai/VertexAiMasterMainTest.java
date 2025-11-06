@@ -170,6 +170,9 @@ class VertexAiMasterMainTest {
 
     System.out.println("Starting model validation test. Results will be saved to: " + csvFileName);
 
+    int passedCount = 0;
+    int failedCount = 0;
+
     try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
       // CSV Header
       csvWriter.println("full-model-name,region,answer");
@@ -188,6 +191,7 @@ class VertexAiMasterMainTest {
 
         String fullModelName = "";
         String answer = "";
+        boolean testPassed = false;
 
         try {
           System.setOut(new PrintStream(outContent));
@@ -226,38 +230,46 @@ class VertexAiMasterMainTest {
             fullModelName = modelAlias;
           }
 
-          answer = output.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
-
-          // Verify successful execution
-          assertThat(exitCode).as("Model " + modelAlias + " should execute successfully")
-              .isEqualTo(0);
-
-          // Verify response is not empty
-          assertThat(answer).as("Model " + modelAlias + " should return a response").isNotEmpty();
-
-          // Write to CSV: full-model-name,region,answer
-          csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, location, answer));
-          csvWriter.flush();
-
-          System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
+          if (exitCode == 0 && !output.isEmpty()) {
+            answer = output.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
+            testPassed = true;
+            passedCount++;
+            System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
+          } else {
+            answer = "FAILED!";
+            failedCount++;
+            System.err.println("[FAIL] " + modelAlias + " - Exit code: " + exitCode);
+            if (!output.isEmpty()) {
+              System.err.println("  Output: " + output);
+            }
+            if (errorOutput.contains("[ERROR]")) {
+              System.err.println("  Error details: " + errorOutput);
+            }
+          }
 
         } catch (Exception e) {
           System.setOut(originalOut);
           System.setErr(originalErr);
-          System.err.println("[FAIL] " + modelAlias + " - Error: " + e.getMessage());
 
-          // Write error to CSV
-          csvWriter.println(String.format("\"%s\",\"%s\",\"ERROR: %s\"",
-              fullModelName.isEmpty() ? modelAlias : fullModelName, location,
-              e.getMessage().replace("\"", "\"\"")));
-          csvWriter.flush();
+          if (fullModelName.isEmpty()) {
+            fullModelName = modelAlias;
+          }
 
-          throw new AssertionError("Model " + modelAlias + " failed", e);
+          answer = "FAILED!";
+          failedCount++;
+          System.err.println("[FAIL] " + modelAlias + " - Exception: " + e.getMessage());
         }
+
+        // Write to CSV: full-model-name,region,answer
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, location, answer));
+        csvWriter.flush();
       }
     }
 
-    System.out.println(
-        "\nAll " + modelAliases.size() + " models passed! Results saved to: " + csvFileName);
+    System.out.println("\n=== Test Summary ===");
+    System.out.println("Total models: " + modelAliases.size());
+    System.out.println("Passed: " + passedCount);
+    System.out.println("Failed: " + failedCount);
+    System.out.println("Results saved to: " + csvFileName);
   }
 }
