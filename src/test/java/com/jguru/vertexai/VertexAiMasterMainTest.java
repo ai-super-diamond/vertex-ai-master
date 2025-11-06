@@ -22,11 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class VertexAiMasterMainTest {
 
   @Test
-  void simpleTest() {
-    assertThat(true).isTrue();
-  }
-
-  @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void testVertexAiWithServiceAccountKey() {
     // Given: Service Account key file path
@@ -164,9 +159,10 @@ class VertexAiMasterMainTest {
       modelProps.load(input);
     }
 
-    // Extract all model aliases dynamically from properties (exclude .region properties)
+    // Extract all model aliases dynamically from properties (exclude .region and .provider)
     List<String> modelAliases = modelProps.keySet().stream().map(Object::toString)
-        .filter(key -> !key.endsWith(".region")).sorted().collect(Collectors.toList());
+        .filter(key -> !key.endsWith(".region") && !key.endsWith(".provider")).sorted()
+        .collect(Collectors.toList());
 
     String testPrompt = "200+200*99=?";
 

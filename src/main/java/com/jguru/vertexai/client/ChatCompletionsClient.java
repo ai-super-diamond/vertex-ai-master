@@ -1,0 +1,175 @@
+package com.jguru.vertexai.client;
+
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+
+/**
+ * Client for interacting with Vertex AI OpenAI-compatible Chat Completions API. Used for MaaS
+ * (Model-as-a-Service) models that require the /chat/completions endpoint.
+ */
+public class ChatCompletionsClient {
+
+  private final String projectId;
+  private final String location;
+  private final GoogleCredentials credentials;
+  private final Gson gson;
+
+  /**
+   * Constructor for Chat Completions client.
+   *
+   * @param projectId
+   *          Google Cloud project ID
+   * @param location
+   *          Google Cloud location (e.g., us-central1)
+   * @param credentials
+   *          Google credentials for authentication
+   */
+  public ChatCompletionsClient(String projectId, String location, GoogleCredentials credentials) {
+    this.projectId = projectId;
+    this.location = location;
+    this.credentials = credentials;
+    this.gson = new Gson();
+  }
+
+  /**
+   * Calls the Chat Completions API endpoint.
+   *
+   * @param modelName
+   *          Full model name with provider prefix (e.g.,
+   *          "qwen/qwen3-coder-480b-a35b-instruct-maas")
+   * @param prompt
+   *          User prompt text
+   * @return Response text from the model
+   * @throws IOException
+   *           If the API call fails
+   */
+  public String generateContent(String modelName, String prompt) throws IOException {
+    // Build the endpoint URL
+    String endpoint = String.format(
+        "https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions",
+        location, projectId, location);
+
+    // Refresh credentials if needed
+    AccessToken accessToken = credentials.getAccessToken();
+    if (accessToken == null || accessToken.getExpirationTime().before(new Date())) {
+      credentials.refresh();
+      accessToken = credentials.getAccessToken();
+    }
+
+    // Build request body
+    JsonObject requestBody = new JsonObject();
+    requestBody.addProperty("model", modelName);
+    requestBody.addProperty("stream", false);
+
+    JsonArray messages = new JsonArray();
+    JsonObject message = new JsonObject();
+    message.addProperty("role", "user");
+    message.addProperty("content", prompt);
+    messages.add(message);
+    requestBody.add("messages", messages);
+
+    // Make HTTP request
+    URL url = new URL(endpoint);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+    try {
+      conn.setRequestMethod("POST");
+      conn.setRequestProperty("Authorization", "Bearer " + accessToken.getTokenValue());
+      conn.setRequestProperty("Content-Type", "application/json");
+      conn.setDoOutput(true);
+
+      // Write request body
+      try (OutputStream os = conn.getOutputStream()) {
+        byte[] input = gson.toJson(requestBody).getBytes(StandardCharsets.UTF_8);
+        os.write(input, 0, input.length);
+      }
+
+      // Read response
+      int responseCode = conn.getResponseCode();
+      if (responseCode >= 200 && responseCode < 300) {
+        return parseSuccessResponse(conn);
+      } else {
+        throw new IOException(parseErrorResponse(conn, responseCode));
+      }
+    } finally {
+      conn.disconnect();
+    }
+  }
+
+  /**
+   * Parses successful response from the API.
+   */
+  private String parseSuccessResponse(HttpURLConnection conn) throws IOException {
+    StringBuilder response = new StringBuilder();
+    try (BufferedReader br = new BufferedReader(
+        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+      String responseLine;
+      while ((responseLine = br.readLine()) != null) {
+        response.append(responseLine.trim());
+      }
+    }
+
+    // Parse JSON response
+    JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+
+    // Extract content from choices[0].message.content
+    if (jsonResponse.has("choices") && jsonResponse.get("choices").isJsonArray()) {
+      JsonArray choices = jsonResponse.getAsJsonArray("choices");
+      if (choices.size() > 0) {
+        JsonObject firstChoice = choices.get(0).getAsJsonObject();
+        if (firstChoice.has("message")) {
+          JsonObject message = firstChoice.getAsJsonObject("message");
+          if (message.has("content")) {
+            return message.get("content").getAsString();
+          }
+        }
+      }
+    }
+
+    throw new IOException("Unexpected response format: " + response);
+  }
+
+  /**
+   * Parses error response from the API.
+   */
+  private String parseErrorResponse(HttpURLConnection conn, int responseCode) throws IOException {
+    StringBuilder error = new StringBuilder();
+    try (BufferedReader br = new BufferedReader(
+        new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+      String responseLine;
+      while ((responseLine = br.readLine()) != null) {
+        error.append(responseLine.trim());
+      }
+    }
+
+    String errorMessage = String.format("HTTP %d: %s", responseCode, error);
+
+    // Try to extract error message from JSON
+    try {
+      JsonObject jsonError = gson.fromJson(error.toString(), JsonObject.class);
+      if (jsonError.has("error")) {
+        JsonObject errorObj = jsonError.getAsJsonObject("error");
+        if (errorObj.has("message")) {
+          errorMessage = String.format("HTTP %d: %s", responseCode,
+              errorObj.get("message").getAsString());
+        }
+      }
+    } catch (Exception e) {
+      // Keep the original error message if JSON parsing fails
+    }
+
+    return errorMessage;
+  }
+}
