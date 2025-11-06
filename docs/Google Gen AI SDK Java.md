@@ -15,7 +15,7 @@ If you're using Maven, add the following to your dependencies:
   <dependency>
     <groupId>com.google.genai</groupId>
     <artifactId>google-genai</artifactId>
-    <version>1.25.0</version>
+    <version>1.26.0</version>
   </dependency>
 </dependencies>
 ```
@@ -70,6 +70,34 @@ Client client = Client.builder()
   .build();
 ```
 
+##### Using Service Account JSON Key (in file)
+
+```java
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.genai.Client;
+
+
+String serviceAccountKeyPath = "/path/to/your/service-account-key.json";
+
+    // Create credentials from the service account key file.
+    GoogleCredentials credentials = GoogleCredentials.fromStream(new FileInputStream(serviceAccountKeyPath));
+
+    // Instantiate the client with the credentials, project, and location.
+   Client.builder()
+       			.credentials(credentials)
+                .project(projectId)
+                .location(location)
+                .vertexAI(true)
+                .build();
+    );
+```
+
+
+
+
+
+
+
 #### (Optional) Using environment variables:
 
 You can create a client by configuring the necessary environment variables.
@@ -108,6 +136,8 @@ import com.google.genai.Client;
 
 Client client = new Client();
 ```
+
+
 
 ### API Selection
 

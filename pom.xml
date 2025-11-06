@@ -13,7 +13,7 @@
     <maven.compiler.source>25</maven.compiler.source>
     <maven.compiler.target>25</maven.compiler.target>
     <picocli.version>4.7.0</picocli.version>
-    <google.genai.version>1.25.0</google.genai.version>
+    <google.genai.version>1.26.0</google.genai.version>
     <junit.version>5.10.2</junit.version>
     <assertj.version>3.25.3</assertj.version>
     <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
