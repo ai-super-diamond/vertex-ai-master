@@ -14,7 +14,9 @@ import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -141,6 +143,55 @@ class VertexAiMasterMainTest {
             "credentials", "Failed to load service account key", "ADC fallback is disabled");
   }
 
+  // Region to city mapping
+  private static String getRegionCity(String region) {
+    Map<String, String> regionCityMap = new HashMap<>();
+    // US regions
+    regionCityMap.put("us-central1", "Iowa");
+    regionCityMap.put("us-east1", "South Carolina");
+    regionCityMap.put("us-east4", "Northern Virginia");
+    regionCityMap.put("us-east5", "Columbus");
+    regionCityMap.put("us-south1", "Dallas");
+    regionCityMap.put("us-west1", "Oregon");
+    regionCityMap.put("us-west2", "Los Angeles");
+    regionCityMap.put("us-west3", "Salt Lake City");
+    regionCityMap.put("us-west4", "Las Vegas");
+    // Europe regions
+    regionCityMap.put("europe-central2", "Warsaw");
+    regionCityMap.put("europe-north1", "Finland");
+    regionCityMap.put("europe-southwest1", "Madrid");
+    regionCityMap.put("europe-west1", "Belgium");
+    regionCityMap.put("europe-west2", "London");
+    regionCityMap.put("europe-west3", "Frankfurt");
+    regionCityMap.put("europe-west4", "Netherlands");
+    regionCityMap.put("europe-west6", "Zurich");
+    regionCityMap.put("europe-west8", "Milan");
+    regionCityMap.put("europe-west9", "Paris");
+    regionCityMap.put("europe-west12", "Turin");
+    // Asia regions
+    regionCityMap.put("asia-east1", "Taiwan");
+    regionCityMap.put("asia-east2", "Hong Kong");
+    regionCityMap.put("asia-northeast1", "Tokyo");
+    regionCityMap.put("asia-northeast2", "Osaka");
+    regionCityMap.put("asia-northeast3", "Seoul");
+    regionCityMap.put("asia-south1", "Mumbai");
+    regionCityMap.put("asia-south2", "Delhi");
+    regionCityMap.put("asia-southeast1", "Singapore");
+    regionCityMap.put("asia-southeast2", "Jakarta");
+    regionCityMap.put("australia-southeast1", "Sydney");
+    regionCityMap.put("australia-southeast2", "Melbourne");
+    // Other regions
+    regionCityMap.put("me-central1", "Doha");
+    regionCityMap.put("me-central2", "Dammam");
+    regionCityMap.put("me-west1", "Tel Aviv");
+    regionCityMap.put("africa-south1", "Johannesburg");
+    regionCityMap.put("northamerica-northeast1", "Montreal");
+    regionCityMap.put("northamerica-northeast2", "Toronto");
+    regionCityMap.put("southamerica-east1", "Sao Paulo");
+    regionCityMap.put("southamerica-west1", "Santiago");
+    return regionCityMap.getOrDefault(region, "Unknown");
+  }
+
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void shouldAllModelsPass() throws IOException {
@@ -179,7 +230,7 @@ class VertexAiMasterMainTest {
 
     try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
       // CSV Header
-      csvWriter.println("full-model-name,region,answer");
+      csvWriter.println("full-model-name,region,city,answer");
 
       // Test each model
       for (String modelAlias : modelAliases) {
@@ -198,7 +249,6 @@ class VertexAiMasterMainTest {
 
         String fullModelName = "";
         String answer = "";
-        boolean testPassed = false;
 
         try {
           System.setOut(new PrintStream(outContent));
@@ -240,7 +290,7 @@ class VertexAiMasterMainTest {
           if (exitCode == 0 && !output.isEmpty()) {
             // Remove all newlines and carriage returns for single-line CSV output
             answer = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
-            testPassed = true;
+
             passedCount++;
             System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
           } else {
@@ -313,8 +363,10 @@ class VertexAiMasterMainTest {
           System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
         }
 
-        // Write to CSV: full-model-name,region,answer
-        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, region, answer));
+        // Write to CSV: full-model-name,region,city,answer
+        String city = getRegionCity(region);
+        csvWriter.println(
+            String.format("\"%s\",\"%s\",\"%s\",\"%s\"", fullModelName, region, city, answer));
         csvWriter.flush();
       }
     }
@@ -437,8 +489,9 @@ class VertexAiMasterMainTest {
         }
 
         // Write to CSV
-        csvWriter.println(
-            String.format("\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias, region, status, response));
+        String city = getRegionCity(region);
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias,
+            region, city, status, response));
         csvWriter.flush();
       }
     }
@@ -488,7 +541,7 @@ class VertexAiMasterMainTest {
 
     try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
       // CSV Header
-      csvWriter.println("model-alias,region,status,response");
+      csvWriter.println("model-alias,region,city,status,response");
 
       for (String region : usRegions) {
         System.out.println("\nTesting region: " + region);
@@ -568,8 +621,9 @@ class VertexAiMasterMainTest {
         }
 
         // Write to CSV
-        csvWriter.println(
-            String.format("\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias, region, status, response));
+        String city = getRegionCity(region);
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias,
+            region, city, status, response));
         csvWriter.flush();
       }
     }

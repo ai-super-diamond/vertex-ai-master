@@ -50,6 +50,7 @@ The answer is 20000."
 "deepseek-ocr-maas","global","FAILED!"
 "qwen3-235b-a22b-instruct-2507-maas","us-south1","FAILED!"
 "qwen3-coder-480b-a35b-instruct-maas","us-south1","FAILED!"
+qwen3-coder-480b-a35b-instruct-maas
 "qwen3-next-80b-a3b-instruct-maas","global","FAILED!"
 "qwen3-next-80b-a3b-thinking-maas","global","FAILED!"
 "minimax-m2-maas","global","FAILED!"
