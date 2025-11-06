@@ -166,10 +166,9 @@ class VertexAiMasterMainTest {
 
     // All model aliases from models.properties
     List<String> modelAliases = Arrays.asList("gemini.pro", "openai.gpt.oss.120b", "llama.3_3.70b",
-        "llama.4.maverick.17b.128e", "llama.4.scout.17b.16e", "llama.3_2.90b.vision",
-        "llama.3_1.405b", "llama.3_1.70b", "deepseek.r1.0528", "deepseek.ocr", "qwen3.235b.a22b",
-        "qwen3.coder.480b.a35b", "qwen3.next.80b.a3b", "qwen3.next.80b.a3b.thinking", "minimax.m2",
-        "codestral.2");
+        "llama.4.maverick.17b.128e", "llama.4.scout.17b.16e", "llama.3_1.405b", "llama.3_1.70b",
+        "deepseek.r1.0528", "deepseek.ocr", "qwen3.235b.a22b", "qwen3.coder.480b.a35b",
+        "qwen3.next.80b.a3b", "qwen3.next.80b.a3b.thinking", "minimax.m2");
 
     String testPrompt = "200+200*99=?";
 
@@ -249,15 +248,24 @@ class VertexAiMasterMainTest {
             passedCount++;
             System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
           } else {
-            answer = "FAILED!";
-            failedCount++;
-            System.err.println("[FAIL] " + modelAlias + " - Exit code: " + exitCode);
-            if (!output.isEmpty()) {
-              System.err.println("  Output: " + output);
-            }
+            // Extract error message from error output
+            String errorMsg = "Exit code: " + exitCode;
             if (errorOutput.contains("[ERROR]")) {
-              System.err.println("  Error details: " + errorOutput);
+              // Find the error message in the output
+              String[] lines = errorOutput.split("\\n");
+              for (String line : lines) {
+                if (line.contains("[ERROR]")) {
+                  errorMsg = line.trim();
+                  break;
+                }
+              }
+            } else if (!output.isEmpty()) {
+              errorMsg = output.trim();
             }
+
+            answer = errorMsg.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
+            failedCount++;
+            System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
           }
 
         } catch (Exception e) {
@@ -268,9 +276,10 @@ class VertexAiMasterMainTest {
             fullModelName = modelAlias;
           }
 
-          answer = "FAILED!";
+          String errorMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
+          answer = errorMsg.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
           failedCount++;
-          System.err.println("[FAIL] " + modelAlias + " - Exception: " + e.getMessage());
+          System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
         }
 
         // Write to CSV: full-model-name,region,answer
