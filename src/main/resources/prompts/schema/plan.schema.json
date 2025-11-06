@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/prompts/schema/plan.schema.json",
+  "title": "AgentPlan",
+  "type": "object",
+  "required": ["goal", "steps"],
+  "properties": {
+    "goal": {"type": "string"},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "tool"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "decision": {"type": "string"},
+          "tool": {"type": "string"},
+          "input": {"type": "object"},
+          "stop_if": {"type": "string"},
+          "observability": {"type": "object", "properties": {"log": {"type": "boolean"}}, "additionalProperties": false}
+        },
+        "additionalProperties": false
+      }
+    },
+    "stop_criteria": {"type": "array", "items": {"type": "string"}},
+    "risks": {"type": "array", "items": {"type": "string"}},
+    "fallbacks": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}
