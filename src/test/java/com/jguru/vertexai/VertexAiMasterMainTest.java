@@ -2,17 +2,26 @@ package com.jguru.vertexai;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class VertexAiMasterMainTest {
+
+  private static final Logger logger = LoggerFactory.getLogger(VertexAiMasterMainTest.class);
 
   @Test
   void simpleTest() {
@@ -140,7 +149,7 @@ class VertexAiMasterMainTest {
 
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
-  void shouldAllModelsPass() {
+  void shouldAllModelsPass() throws IOException {
     // Given: Working Service Account key file path
     String workingKeyPath = "keys\\working.json";
     File workingKeyFile = new File(workingKeyPath);
@@ -156,56 +165,103 @@ class VertexAiMasterMainTest {
         "codestral.2");
 
     String testPrompt = "200+200*99=?";
+    String location = "us-central1";
 
-    // Test each model
-    for (String modelAlias : modelAliases) {
-      System.out.println("\n=== Testing model: " + modelAlias + " ===");
+    // Create CSV file with timestamp
+    String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+    String csvFileName = "model-test-results_" + timestamp + ".csv";
+    File csvFile = new File(csvFileName);
 
-      String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", "us-central1",
-          "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
+    logger.info("Starting model validation test. Results will be saved to: {}", csvFileName);
 
-      ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-      ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-      PrintStream originalOut = System.out;
-      PrintStream originalErr = System.err;
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+      // CSV Header
+      csvWriter.println("full-model-name,region,answer");
 
-      try {
-        System.setOut(new PrintStream(outContent));
-        System.setErr(new PrintStream(errContent));
+      // Test each model
+      for (String modelAlias : modelAliases) {
+        logger.info("Testing model: {}", modelAlias);
 
-        VertexAiMasterMain app = new VertexAiMasterMain();
-        CommandLine cmd = new CommandLine(app);
-        int exitCode = cmd.execute(args);
+        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", location,
+            "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
 
-        // Restore streams immediately to print results
-        System.setOut(originalOut);
-        System.setErr(originalErr);
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        PrintStream originalErr = System.err;
 
-        String output = outContent.toString().trim();
-        String errorOutput = errContent.toString();
+        String fullModelName = "";
+        String answer = "";
 
-        // Then: Verify successful execution
-        assertThat(exitCode).as("Model " + modelAlias + " should execute successfully")
-            .isEqualTo(0);
+        try {
+          System.setOut(new PrintStream(outContent));
+          System.setErr(new PrintStream(errContent));
 
-        // Verify response is not empty
-        assertThat(output).as("Model " + modelAlias + " should return a response").isNotEmpty();
+          VertexAiMasterMain app = new VertexAiMasterMain();
+          CommandLine cmd = new CommandLine(app);
+          int exitCode = cmd.execute(args);
 
-        // Print results
-        System.out.println("[PASS] " + modelAlias + " - Response: " + output);
-        if (errorOutput.contains("[INFO]")) {
-          System.out.println("       Model resolved: "
-              + errorOutput.substring(errorOutput.indexOf("[INFO]")).split("\\n")[0]);
+          // Restore streams immediately to print results
+          System.setOut(originalOut);
+          System.setErr(originalErr);
+
+          String output = outContent.toString().trim();
+          String errorOutput = errContent.toString();
+
+          // Extract full model name from error output
+          if (errorOutput.contains("[INFO] Resolved model alias")) {
+            String[] lines = errorOutput.split("\\n");
+            for (String line : lines) {
+              if (line.contains("[INFO] Resolved model alias")) {
+                int arrowIndex = line.indexOf("-> '");
+                if (arrowIndex != -1) {
+                  int endIndex = line.indexOf("'", arrowIndex + 4);
+                  if (endIndex != -1) {
+                    fullModelName = line.substring(arrowIndex + 4, endIndex);
+                  }
+                }
+                break;
+              }
+            }
+          }
+
+          // Default to alias if full name not found
+          if (fullModelName.isEmpty()) {
+            fullModelName = modelAlias;
+          }
+
+          answer = output.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
+
+          // Verify successful execution
+          assertThat(exitCode).as("Model " + modelAlias + " should execute successfully")
+              .isEqualTo(0);
+
+          // Verify response is not empty
+          assertThat(answer).as("Model " + modelAlias + " should return a response").isNotEmpty();
+
+          // Write to CSV: full-model-name,region,answer
+          csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, location, answer));
+          csvWriter.flush();
+
+          logger.info("[PASS] {} - Answer: {}", modelAlias, answer);
+
+        } catch (Exception e) {
+          System.setOut(originalOut);
+          System.setErr(originalErr);
+          logger.error("[FAIL] {} - Error: {}", modelAlias, e.getMessage());
+
+          // Write error to CSV
+          csvWriter.println(String.format("\"%s\",\"%s\",\"ERROR: %s\"",
+              fullModelName.isEmpty() ? modelAlias : fullModelName, location,
+              e.getMessage().replace("\"", "\"\"")));
+          csvWriter.flush();
+
+          throw new AssertionError("Model " + modelAlias + " failed", e);
         }
-
-      } catch (Exception e) {
-        System.setOut(originalOut);
-        System.setErr(originalErr);
-        System.err.println("[FAIL] " + modelAlias + " - Error: " + e.getMessage());
-        throw new AssertionError("Model " + modelAlias + " failed", e);
       }
     }
 
-    System.out.println("\n=== All " + modelAliases.size() + " models passed! ===");
+    logger.info("All {} models passed! Results saved to: {}", modelAliases.size(), csvFileName);
+    System.out.println("\n=== CSV Results saved to: " + csvFileName + " ===");
   }
 }
