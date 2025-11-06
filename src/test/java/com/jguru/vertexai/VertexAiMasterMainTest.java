@@ -2,8 +2,6 @@ package com.jguru.vertexai;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
@@ -20,8 +18,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class VertexAiMasterMainTest {
-
-  private static final Logger logger = LoggerFactory.getLogger(VertexAiMasterMainTest.class);
 
   @Test
   void simpleTest() {
@@ -172,7 +168,7 @@ class VertexAiMasterMainTest {
     String csvFileName = "model-test-results_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
-    logger.info("Starting model validation test. Results will be saved to: {}", csvFileName);
+    System.out.println("Starting model validation test. Results will be saved to: " + csvFileName);
 
     try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
       // CSV Header
@@ -180,7 +176,7 @@ class VertexAiMasterMainTest {
 
       // Test each model
       for (String modelAlias : modelAliases) {
-        logger.info("Testing model: {}", modelAlias);
+        System.out.println("\nTesting model: " + modelAlias);
 
         String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", location,
             "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
@@ -243,12 +239,12 @@ class VertexAiMasterMainTest {
           csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, location, answer));
           csvWriter.flush();
 
-          logger.info("[PASS] {} - Answer: {}", modelAlias, answer);
+          System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
 
         } catch (Exception e) {
           System.setOut(originalOut);
           System.setErr(originalErr);
-          logger.error("[FAIL] {} - Error: {}", modelAlias, e.getMessage());
+          System.err.println("[FAIL] " + modelAlias + " - Error: " + e.getMessage());
 
           // Write error to CSV
           csvWriter.println(String.format("\"%s\",\"%s\",\"ERROR: %s\"",
@@ -261,7 +257,7 @@ class VertexAiMasterMainTest {
       }
     }
 
-    logger.info("All {} models passed! Results saved to: {}", modelAliases.size(), csvFileName);
-    System.out.println("\n=== CSV Results saved to: " + csvFileName + " ===");
+    System.out.println(
+        "\nAll " + modelAliases.size() + " models passed! Results saved to: " + csvFileName);
   }
 }

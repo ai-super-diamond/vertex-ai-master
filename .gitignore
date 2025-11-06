@@ -10,13 +10,6 @@ target/
 *.war
 *.ear
 
-### Service Account Keys ###
-keys/working.json
-keys/skorec.json
-
-### Test Results ###
-model-test-results_*.csv
-
 ### STS ###
 .apt_generated
 .classpath
