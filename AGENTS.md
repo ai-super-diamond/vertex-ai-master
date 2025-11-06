@@ -234,12 +234,14 @@ When `--sa-key-file` is explicitly provided, the application MUST:
 - **context7**: Library documentation lookup
 - **exa**: Advanced search and context retrieval
 - **sequential-thinking**: Complex task orchestration
+- **desktop-commander**: Desktop automation and system operations
 
 **Tool selection rubric:**
 - Use `serper` for time-sensitive facts, current events
 - Use `context7` for API docs, library references
 - Use `exa` for deep research, synthesizing multiple sources
 - Use `sequential-thinking` for multi-step reasoning tasks
+- Use `desktop-commander` for desktop automation, file operations, system commands
 
 **Integration status:** MCP tools are not yet wired into the CLI. Planned implementation:
 1. Add `ToolClient` abstraction for MCP server communication
