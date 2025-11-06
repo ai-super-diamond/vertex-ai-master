@@ -53,12 +53,114 @@ d:\java\maven\bin\mvn.cmd test -Dtest=VertexAiMasterMainTest#testVertexAiWithSer
 **Test files:**
 - Working SA key: `keys\skorec.json` (from backup location)
 - Expired SA key: `keys\expired.json`
-- Main test class: `src/test/java/com/example/demo/VertexAiMasterMainTest.java`
+- Main test class: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
 
 **Important:** All tests must pass before committing. Integration tests validate:
 1. Service account authentication works
 2. Application does NOT fall back to ADC when explicit `--sa-key-file` is provided
 3. Invalid/expired keys fail with proper error messages
+
+## GitHub Workflow
+
+**Clone the repository:**
+```bash
+git clone https://github.com/YOUR_USERNAME/vertex-ai-master.git
+cd vertex-ai-master
+```
+
+**Before starting work:**
+```bash
+# Ensure you're on main and up-to-date
+git checkout main
+git pull origin main
+```
+
+**Create a feature branch:**
+```bash
+# Use descriptive branch names: feature/description or fix/description
+git checkout -b feature/your-feature-name
+```
+
+**During development:**
+```bash
+# Format code before committing (MANDATORY)
+d:\java\maven\bin\mvn.cmd spotless:apply
+
+# Run tests to verify changes
+d:\java\maven\bin\mvn.cmd clean test
+
+# Stage changes
+git add -A
+
+# Commit with concise message (max 50 chars for subject)
+git commit -m "Add feature: description"
+
+# For detailed commits, use body:
+git commit -m "Add feature: description" -m "Detailed explanation of changes, why they were needed, and any breaking changes."
+```
+
+**Commit message guidelines:**
+- Subject line: max 50 characters, imperative mood ("Add", "Fix", "Update")
+- Separate subject from body with blank line
+- Body: wrap at 72 characters, explain what and why (not how)
+- Examples:
+  - `"Add Spotless formatting toolchain"`
+  - `"Fix ADC fallback prevention in VertexAiClient"`
+  - `"Update dependencies to latest versions"`
+
+**Push changes:**
+```bash
+# Push feature branch to remote
+git push origin feature/your-feature-name
+
+# If branch already exists and you need to force push (use carefully)
+git push --force-with-lease origin feature/your-feature-name
+```
+
+**Create Pull Request:**
+1. Go to GitHub repository
+2. Click "New Pull Request"
+3. Select your feature branch
+4. Title: Same as commit message or descriptive summary
+5. Description: Explain changes, testing done, any breaking changes
+6. Wait for CI checks to pass before requesting review
+
+**Update branch with main:**
+```bash
+# If main has advanced while working on feature
+git checkout main
+git pull origin main
+git checkout feature/your-feature-name
+git rebase main
+
+# Resolve any conflicts, then continue
+git rebase --continue
+
+# Force push rebased branch
+git push --force-with-lease origin feature/your-feature-name
+```
+
+**After PR is merged:**
+```bash
+# Switch back to main
+git checkout main
+git pull origin main
+
+# Delete local feature branch
+git branch -d feature/your-feature-name
+
+# Delete remote feature branch (if not auto-deleted)
+git push origin --delete feature/your-feature-name
+```
+
+**CRITICAL pre-commit checklist:**
+1. ✅ Run `mvn spotless:apply` to format all code
+2. ✅ Run `mvn clean test` - all tests must pass
+3. ✅ No compilation errors or warnings
+4. ✅ No `.class` files or other build artifacts in commit
+5. ✅ No sensitive data (API keys, service account files) in commit
+6. ✅ Commit message follows 50-character subject limit
+7. ✅ Changes are focused and atomic (one logical change per commit)
 
 ## Code Style Guidelines
 
@@ -95,7 +197,7 @@ d:\java\maven\bin\mvn.cmd checkstyle:check
 - Client logic: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
 - Utilities: `src/main/java/com/jguru/vertexai/utils/VertexUtils.java`
 - Model aliases: `src/main/resources/models.properties`
-- Tests: `src/test/java/com/example/demo/VertexAiMasterMainTest.java`
+- Tests: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
 
 **Model configuration:**
 - Models are aliased in `models.properties` (e.g., `gemini.pro=gemini-2.5-pro`)
