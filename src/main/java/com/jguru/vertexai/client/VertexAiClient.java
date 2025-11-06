@@ -89,25 +89,6 @@ public class VertexAiClient {
   }
 
   /**
-   * Determines if a model requires the Chat Completions API. MaaS models with a provider prefix use
-   * the Chat Completions endpoint.
-   */
-  private boolean isChatCompletionsModel(String modelName) {
-    // Check if model has a .provider property defined
-    for (Object key : modelProperties.keySet()) {
-      String keyStr = key.toString();
-      if (keyStr.endsWith(".provider")) {
-        String modelAlias = keyStr.substring(0, keyStr.length() - 9); // Remove ".provider"
-        String fullModelName = modelProperties.getProperty(modelAlias);
-        if (fullModelName != null && fullModelName.equals(modelName)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
    * Gets the provider prefix for a MaaS model. Returns the provider prefix or null if not a MaaS
    * model.
    */
