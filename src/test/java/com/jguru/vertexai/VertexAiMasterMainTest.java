@@ -13,9 +13,9 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -155,7 +155,7 @@ class VertexAiMasterMainTest {
     // Verify the working key file exists
     assertThat(workingKeyFile).as("Working Service Account key file should exist").exists();
 
-    // Load models.properties to get region information
+    // Load models.properties to get region information and model list
     Properties modelProps = new Properties();
     try (InputStream input = getClass().getClassLoader().getResourceAsStream("models.properties")) {
       if (input == null) {
@@ -164,11 +164,9 @@ class VertexAiMasterMainTest {
       modelProps.load(input);
     }
 
-    // All model aliases from models.properties
-    List<String> modelAliases = Arrays.asList("gemini.pro", "openai.gpt.oss.120b", "llama.3_3.70b",
-        "llama.4.maverick.17b.128e", "llama.4.scout.17b.16e", "llama.3_1.405b", "llama.3_1.70b",
-        "deepseek.r1.0528", "deepseek.ocr", "qwen3.235b.a22b", "qwen3.coder.480b.a35b",
-        "qwen3.next.80b.a3b", "qwen3.next.80b.a3b.thinking", "minimax.m2");
+    // Extract all model aliases dynamically from properties (exclude .region properties)
+    List<String> modelAliases = modelProps.keySet().stream().map(Object::toString)
+        .filter(key -> !key.endsWith(".region")).sorted().collect(Collectors.toList());
 
     String testPrompt = "200+200*99=?";
 
@@ -248,19 +246,54 @@ class VertexAiMasterMainTest {
             passedCount++;
             System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
           } else {
-            // Extract error message from error output
-            String errorMsg = "Exit code: " + exitCode;
+            // Extract meaningful error message from error output
+            String errorMsg = "Unknown error";
+
+            // Try to find specific error messages in stderr
             if (errorOutput.contains("[ERROR]")) {
-              // Find the error message in the output
+              // Extract the first ERROR line
               String[] lines = errorOutput.split("\\n");
               for (String line : lines) {
                 if (line.contains("[ERROR]")) {
-                  errorMsg = line.trim();
+                  // Remove [ERROR] prefix and timestamp
+                  errorMsg = line.replaceFirst(".*\\[ERROR\\]\\s*", "").trim();
                   break;
                 }
               }
+            } else if (errorOutput.contains("Exception") || errorOutput.contains("Error")) {
+              // Look for exception messages
+              String[] lines = errorOutput.split("\\n");
+              for (String line : lines) {
+                if (line.contains("Exception")
+                    || (line.contains("Error") && !line.contains("[INFO]"))) {
+                  errorMsg = line.trim();
+                  // If line is too long, try to extract just the exception message
+                  if (errorMsg.length() > 200) {
+                    int colonIdx = errorMsg.indexOf(":");
+                    if (colonIdx > 0 && colonIdx < errorMsg.length() - 1) {
+                      errorMsg = errorMsg.substring(0, colonIdx + 1) + errorMsg
+                          .substring(colonIdx + 1, Math.min(errorMsg.length(), colonIdx + 150));
+                    }
+                  }
+                  break;
+                }
+              }
+            } else if (errorOutput.contains("PERMISSION_DENIED")
+                || errorOutput.contains("UNAUTHENTICATED")) {
+              errorMsg = "Permission denied or authentication failed";
+            } else if (errorOutput.contains("NOT_FOUND")) {
+              errorMsg = "Model or resource not found";
+            } else if (errorOutput.contains("RESOURCE_EXHAUSTED")) {
+              errorMsg = "Quota exceeded or resource exhausted";
+            } else if (errorOutput.contains("INVALID_ARGUMENT")) {
+              errorMsg = "Invalid argument in request";
             } else if (!output.isEmpty()) {
               errorMsg = output.trim();
+              if (errorMsg.length() > 150) {
+                errorMsg = errorMsg.substring(0, 150) + "...";
+              }
+            } else if (exitCode != 0) {
+              errorMsg = "Exit code: " + exitCode + " (no error details captured)";
             }
 
             answer = errorMsg.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
