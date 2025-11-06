@@ -83,13 +83,13 @@ git checkout -b feature/your-feature-name
 
 **During development:**
 ```bash
-# Format code before committing (MANDATORY)
+# MANDATORY BEFORE COMMIT: Format code
 d:\java\maven\bin\mvn.cmd spotless:apply
 
-# Run tests to verify changes
+# MANDATORY BEFORE COMMIT: Run ALL tests - must pass 100%
 d:\java\maven\bin\mvn.cmd clean test
 
-# Stage changes
+# Only after formatting AND tests pass:
 git add -A
 
 # Commit with concise message (max 50 chars for subject)
@@ -153,14 +153,16 @@ git branch -d feature/your-feature-name
 git push origin --delete feature/your-feature-name
 ```
 
-**CRITICAL pre-commit checklist:**
-1. ✅ Run `mvn spotless:apply` to format all code
-2. ✅ Run `mvn clean test` - all tests must pass
-3. ✅ No compilation errors or warnings
+**CRITICAL pre-commit checklist (MANDATORY - NO EXCEPTIONS):**
+1. ✅ **RUN TESTS FIRST**: `mvn clean test` - **ALL tests MUST pass** (0 failures, 0 errors)
+2. ✅ **FORMAT CODE**: `mvn spotless:apply` to format all code
+3. ✅ **VERIFY BUILD**: No compilation errors or warnings
 4. ✅ No `.class` files or other build artifacts in commit
 5. ✅ No sensitive data (API keys, service account files) in commit
 6. ✅ Commit message follows 50-character subject limit
 7. ✅ Changes are focused and atomic (one logical change per commit)
+
+**⚠️ WARNING: NEVER commit without running tests. Test failures indicate broken code.**
 
 ## Code Style Guidelines
 
@@ -185,10 +187,13 @@ d:\java\maven\bin\mvn.cmd checkstyle:check
 - End files with newline
 - Google Java Style checks (warnings only)
 
-**Before committing:**
-1. Run `mvn spotless:apply` to format code
-2. Run `mvn clean test` to ensure all tests pass
+**Before committing (STRICTLY ENFORCED):**
+1. **ALWAYS run `mvn clean test` FIRST** - 100% tests must pass
+2. Run `mvn spotless:apply` to format code
 3. Verify no compilation errors
+4. **Re-run `mvn test` if any files changed during formatting**
+
+**Never skip tests. Broken tests = broken code = DO NOT COMMIT.**
 
 ## Development Environment Tips
 

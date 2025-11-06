@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -81,7 +82,7 @@ public class ChatCompletionsClient {
     requestBody.add("messages", messages);
 
     // Make HTTP request
-    URL url = new URL(endpoint);
+    URL url = URI.create(endpoint).toURL();
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
     try {
