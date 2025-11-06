@@ -8,12 +8,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -153,6 +155,15 @@ class VertexAiMasterMainTest {
     // Verify the working key file exists
     assertThat(workingKeyFile).as("Working Service Account key file should exist").exists();
 
+    // Load models.properties to get region information
+    Properties modelProps = new Properties();
+    try (InputStream input = getClass().getClassLoader().getResourceAsStream("models.properties")) {
+      if (input == null) {
+        throw new IOException("Unable to find models.properties");
+      }
+      modelProps.load(input);
+    }
+
     // All model aliases from models.properties
     List<String> modelAliases = Arrays.asList("gemini.pro", "openai.gpt.oss.120b", "llama.3_3.70b",
         "llama.4.maverick.17b.128e", "llama.4.scout.17b.16e", "llama.3_2.90b.vision",
@@ -161,7 +172,6 @@ class VertexAiMasterMainTest {
         "codestral.2");
 
     String testPrompt = "200+200*99=?";
-    String location = "us-central1";
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -179,9 +189,12 @@ class VertexAiMasterMainTest {
 
       // Test each model
       for (String modelAlias : modelAliases) {
-        System.out.println("\nTesting model: " + modelAlias);
+        // Get region for this model from properties
+        String region = modelProps.getProperty(modelAlias + ".region", "us-central1");
 
-        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", location,
+        System.out.println("\nTesting model: " + modelAlias + " (region: " + region + ")");
+
+        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
             "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -261,7 +274,7 @@ class VertexAiMasterMainTest {
         }
 
         // Write to CSV: full-model-name,region,answer
-        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, location, answer));
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\"", fullModelName, region, answer));
         csvWriter.flush();
       }
     }
