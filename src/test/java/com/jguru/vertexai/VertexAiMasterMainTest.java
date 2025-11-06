@@ -1,6 +1,5 @@
-package com.example.demo;
+package com.jguru.vertexai;
 
-import com.jguru.vertexai.VertexAiMasterMain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import picocli.CommandLine;
