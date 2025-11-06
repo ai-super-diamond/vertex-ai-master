@@ -8,12 +8,25 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
  * Utility class for generating content using Google GenAI and Vertex AI.
  */
 public class VertexUtils {
+
+  // US Regions
+  public static final List<String> US_REGIONS = Arrays.asList("us-central1", "us-east1", "us-east4",
+      "us-east5", "us-south1", "us-west1", "us-west2", "us-west3", "us-west4");
+
+  // Europe Regions
+  public static final List<String> EUROPE_REGIONS = Arrays.asList("europe-west1", "europe-west2",
+      "europe-west3", "europe-west4", "europe-west6", "europe-west8", "europe-west9",
+      "europe-north1", "europe-central2", "europe-southwest1");
 
   private static Properties modelProperties = null;
 
@@ -134,5 +147,79 @@ public class VertexUtils {
     String resolvedModel = resolveModelName(modelName);
     VertexAiClient client = new VertexAiClient(saKeyPath, projectId, location);
     return client.callVertexAi(resolvedModel, text);
+  }
+
+  /**
+   * Checks connectivity and availability of a model across multiple regions.
+   *
+   * @param saKeyPath
+   *          Path to Service Account JSON key file
+   * @param projectId
+   *          Google Cloud project ID
+   * @param modelName
+   *          The model name to test
+   * @param regions
+   *          List of regions to test
+   * @param testPrompt
+   *          Simple test prompt (default: "Hello")
+   * @return Map of region -> result ("SUCCESS" or error message)
+   */
+  public static Map<String, String> checkConnectivityAvailability(String saKeyPath,
+      String projectId, String modelName, List<String> regions, String testPrompt) {
+    Map<String, String> results = new HashMap<>();
+    String prompt = (testPrompt != null && !testPrompt.isEmpty()) ? testPrompt : "Hello";
+    String resolvedModel = resolveModelName(modelName);
+
+    for (String region : regions) {
+      try {
+        VertexAiClient client = new VertexAiClient(saKeyPath, projectId, region);
+        String response = client.callVertexAi(resolvedModel, prompt);
+        if (response != null && !response.isEmpty()) {
+          results.put(region, "SUCCESS");
+        } else {
+          results.put(region, "ERROR: Empty response");
+        }
+      } catch (IOException e) {
+        String errorMsg = e.getMessage();
+        // Extract meaningful error info
+        if (errorMsg.contains("404")) {
+          results.put(region, "404 Not Found");
+        } else if (errorMsg.contains("403")) {
+          results.put(region, "403 Permission Denied");
+        } else if (errorMsg.contains("400")) {
+          results.put(region, "400 Bad Request");
+        } else if (errorMsg.contains("500")) {
+          results.put(region, "500 Internal Error");
+        } else {
+          // Truncate long error messages
+          String shortError = errorMsg.length() > 100
+              ? errorMsg.substring(0, 100) + "..."
+              : errorMsg;
+          results.put(region, "ERROR: " + shortError);
+        }
+      } catch (Exception e) {
+        results.put(region, "ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Checks connectivity and availability of a model across multiple regions with default prompt.
+   *
+   * @param saKeyPath
+   *          Path to Service Account JSON key file
+   * @param projectId
+   *          Google Cloud project ID
+   * @param modelName
+   *          The model name to test
+   * @param regions
+   *          List of regions to test
+   * @return Map of region -> result ("SUCCESS" or error message)
+   */
+  public static Map<String, String> checkConnectivityAvailability(String saKeyPath,
+      String projectId, String modelName, List<String> regions) {
+    return checkConnectivityAvailability(saKeyPath, projectId, modelName, regions, "Hello");
   }
 }
