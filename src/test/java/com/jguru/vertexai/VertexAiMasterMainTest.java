@@ -237,7 +237,8 @@ class VertexAiMasterMainTest {
           }
 
           if (exitCode == 0 && !output.isEmpty()) {
-            answer = output.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
+            // Remove all newlines and carriage returns for single-line CSV output
+            answer = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
             testPassed = true;
             passedCount++;
             System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
@@ -292,7 +293,7 @@ class VertexAiMasterMainTest {
               errorMsg = "Exit code: " + exitCode + " (no error details captured)";
             }
 
-            answer = errorMsg.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
+            answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
             failedCount++;
             System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
           }
@@ -306,7 +307,7 @@ class VertexAiMasterMainTest {
           }
 
           String errorMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
-          answer = errorMsg.replace("\"", "\"\"").replace("\\n", " ").replace("\\r", "");
+          answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
           failedCount++;
           System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
         }
