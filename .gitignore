@@ -4,6 +4,12 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Compiled files ###
+*.class
+*.jar
+*.war
+*.ear
+
 ### STS ###
 .apt_generated
 .classpath
