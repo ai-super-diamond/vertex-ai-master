@@ -13,6 +13,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -323,5 +324,135 @@ class VertexAiMasterMainTest {
     System.out.println("Passed: " + passedCount);
     System.out.println("Failed: " + failedCount);
     System.out.println("Results saved to: " + csvFileName);
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
+  void shouldPassOneAtLeastforUS() throws IOException {
+    // Given: Working Service Account key file path
+    String workingKeyPath = "keys\\working.json";
+    File workingKeyFile = new File(workingKeyPath);
+
+    // Verify the working key file exists
+    assertThat(workingKeyFile).as("Working Service Account key file should exist").exists();
+
+    // Test a 404 model across all US regions to find where it's actually deployed
+    String testModelAlias = "deepseek.ocr"; // Pick a model that returned 404
+    String testPrompt = "200+200*99=?";
+
+    // All US regions to test
+    List<String> usRegions = Arrays.asList("us-central1", "us-east1", "us-east4", "us-east5",
+        "us-south1", "us-west1", "us-west2", "us-west3", "us-west4");
+
+    // Create CSV file with timestamp
+    String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+    String csvFileName = "region-discovery_" + timestamp + ".csv";
+    File csvFile = new File(csvFileName);
+
+    System.out.println("Testing model '" + testModelAlias + "' across all US regions...");
+    System.out.println("Results will be saved to: " + csvFileName);
+
+    int successCount = 0;
+    int failCount = 0;
+
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+      // CSV Header
+      csvWriter.println("model-alias,region,status,response");
+
+      for (String region : usRegions) {
+        System.out.println("\nTesting region: " + region);
+
+        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
+            "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
+
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        PrintStream originalErr = System.err;
+
+        String status = "FAIL";
+        String response = "";
+
+        try {
+          System.setOut(new PrintStream(outContent));
+          System.setErr(new PrintStream(errContent));
+
+          VertexAiMasterMain app = new VertexAiMasterMain();
+          CommandLine cmd = new CommandLine(app);
+          int exitCode = cmd.execute(args);
+
+          // Restore streams
+          System.setOut(originalOut);
+          System.setErr(originalErr);
+
+          String output = outContent.toString().trim();
+          String errorOutput = errContent.toString();
+
+          if (exitCode == 0 && !output.isEmpty()) {
+            status = "PASS";
+            response = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
+            if (response.length() > 100) {
+              response = response.substring(0, 100) + "...";
+            }
+            successCount++;
+            System.out.println("  ✓ [PASS] " + region + " - Model works!");
+          } else {
+            // Extract error message
+            if (errorOutput.contains("404")) {
+              response = "404 Not Found";
+            } else if (errorOutput.contains("403")) {
+              response = "403 Permission Denied";
+            } else if (errorOutput.contains("400")) {
+              response = "400 Bad Request";
+            } else if (errorOutput.contains("500")) {
+              response = "500 Internal Error";
+            } else if (errorOutput.contains("Exception")) {
+              String[] lines = errorOutput.split("\\n");
+              for (String line : lines) {
+                if (line.contains("Exception")) {
+                  response = line.trim();
+                  if (response.length() > 100) {
+                    response = response.substring(0, 100) + "...";
+                  }
+                  break;
+                }
+              }
+            } else {
+              response = "Unknown error - exit code: " + exitCode;
+            }
+            failCount++;
+            System.err.println("  ✗ [FAIL] " + region + " - " + response);
+          }
+
+        } catch (Exception e) {
+          System.setOut(originalOut);
+          System.setErr(originalErr);
+
+          response = e.getClass().getSimpleName() + ": " + e.getMessage();
+          if (response.length() > 100) {
+            response = response.substring(0, 100) + "...";
+          }
+          failCount++;
+          System.err.println("  ✗ [FAIL] " + region + " - " + response);
+        }
+
+        // Write to CSV
+        csvWriter.println(
+            String.format("\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias, region, status, response));
+        csvWriter.flush();
+      }
+    }
+
+    System.out.println("\n=== Region Discovery Summary ===");
+    System.out.println("Model: " + testModelAlias);
+    System.out.println("Total regions tested: " + usRegions.size());
+    System.out.println("Successful: " + successCount);
+    System.out.println("Failed: " + failCount);
+    System.out.println("Results saved to: " + csvFileName);
+
+    // Assert that at least one region worked
+    assertThat(successCount)
+        .as("At least one US region should support the model '" + testModelAlias + "'")
+        .isGreaterThan(0);
   }
 }
