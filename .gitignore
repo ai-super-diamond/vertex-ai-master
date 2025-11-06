@@ -19,7 +19,7 @@ target/
 *.iml
 *.ipr
 
-### Qoder ###
+### Firebase ###
 .idx/
 
 ### NetBeans ###
