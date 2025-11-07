@@ -40,3 +40,16 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Security - Service Account Keys ###
+keys/working.json
+*.json
+!pom.json
+!package.json
+!tsconfig.json
+
+### Test Result Files ###
+*.csv
+model-test-results_*.csv
+deepseek-r1-region-discovery_*.csv
+region-discovery_*.csv
