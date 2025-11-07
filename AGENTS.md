@@ -14,6 +14,12 @@ Instructions for AI coding agents working on this Java CLI project for Google Ve
 
 **Purpose:** Command-line tool to interact with Google's Vertex AI generative models using either API keys or service account authentication.
 
+**Architecture:** Clean 3-tier layered architecture:
+1. **Presentation Layer (CLI):** `VertexAiMasterMain` - Picocli-based command-line interface
+2. **Service Layer:** `VertexAiService` / `VertexAiServiceImpl` - Business logic and orchestration
+3. **Client Layer:** `VertexAiClient` - Direct API communication with Google Cloud
+4. **DTOs:** Data transfer objects with Builder pattern (`AuthenticationConfig`, `GenerationRequest`, `GenerationResult`, `RegionCheckRequest`, `RegionCheckResult`)
+
 ## Build Commands
 
 ```bash
@@ -198,28 +204,69 @@ d:\java\maven\bin\mvn.cmd checkstyle:check
 ## Development Environment Tips
 
 **Key files:**
+
+*Presentation Layer:*
 - Main entry: `src/main/java/com/jguru/vertexai/VertexAiMasterMain.java`
-- Client logic: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
-- Utilities: `src/main/java/com/jguru/vertexai/utils/VertexUtils.java`
+
+*Service Layer:*
+- Interface: `src/main/java/com/jguru/vertexai/service/VertexAiService.java`
+- Implementation: `src/main/java/com/jguru/vertexai/service/VertexAiServiceImpl.java`
+
+*Client Layer:*
+- API client: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
+- Chat Completions: `src/main/java/com/jguru/vertexai/client/ChatCompletionsClient.java`
+
+*DTOs:*
+- `src/main/java/com/jguru/vertexai/service/dto/AuthenticationConfig.java`
+- `src/main/java/com/jguru/vertexai/service/dto/AuthenticationType.java`
+- `src/main/java/com/jguru/vertexai/service/dto/GenerationRequest.java`
+- `src/main/java/com/jguru/vertexai/service/dto/GenerationResult.java`
+- `src/main/java/com/jguru/vertexai/service/dto/RegionCheckRequest.java`
+- `src/main/java/com/jguru/vertexai/service/dto/RegionCheckResult.java`
+
+*Utilities:*
+- Helper methods: `src/main/java/com/jguru/vertexai/utils/VertexUtils.java`
+
+*Configuration:*
 - Model aliases: `src/main/resources/models.properties`
-- Tests: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
+
+*Tests:*
+- Main test class: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
 
 **Model configuration:**
 - Models are aliased in `models.properties` (e.g., `gemini.pro=gemini-2.5-pro`)
-- Use `--model-name` flag to specify model alias or full name
-- Default model resolves through alias system
+- MaaS models require `.provider` property (e.g., `deepseek.r1.0528.provider=deepseek-ai`)
+- Service layer resolves aliases via `VertexAiService.resolveModelName()`
+- Use `--model-name` or `-m` flag to specify model alias or full name
 
-**Authentication modes:**
-1. API Key: `--api-key YOUR_KEY` (Gemini API)
-2. Service Account: `--sa-key-file path/to/key.json` (Vertex AI)
-3. ADC: Default when no explicit auth provided
+**Authentication modes (via `AuthenticationType` enum):**
+1. **API_KEY:** `--api-key YOUR_KEY` (Gemini API direct access)
+2. **SERVICE_ACCOUNT_EXPLICIT_KEY:** `--sa-key-file path/to/key.json` (Vertex AI with explicit credentials)
+3. **SERVICE_ACCOUNT_ADC:** Application Default Credentials (fallback when no `--sa-key-file` provided)
+
+**Authentication flow:**
+- CLI creates `AuthenticationConfig` via builder pattern
+- Service layer creates `GenerationRequest` with auth config
+- Client layer (`VertexAiClient`) handles credential loading and API routing
 
 **CRITICAL: ADC Fallback Prevention**
 When `--sa-key-file` is explicitly provided, the application MUST:
 - Load credentials via `GoogleCredentials.fromStream(new FileInputStream(path))`
 - Use `.credentials(credentials)` in client builder
 - Fail immediately if key is invalid (no ADC fallback)
-- This is enforced in `VertexAiClient.java` lines 93-113
+- This is enforced in `VertexAiClient.java` constructor logic
+
+**Model routing (automatic):**
+- **Standard Vertex AI SDK:** Gemini, Llama models (no `.provider` property)
+- **Chat Completions API:** MaaS models with `.provider` property (DeepSeek, Qwen, MiniMax, OpenAI)
+- Client detects provider and routes accordingly
+
+**Region check feature:**
+- CLI flag: `--check-all-regions` or `-car`
+- Cluster flag: `--cluster` or `-c` (US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA)
+- Tests model across all regions in specified cluster
+- Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
+- Example: `vertex.exe -car -c US -m deepseek.r1.0528 --project-id PROJECT --location us-central1 --sa-key-file key.json`
 
 ## Security Considerations
 

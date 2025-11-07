@@ -1,6 +1,13 @@
 package com.jguru.vertexai;
 
-import com.jguru.vertexai.utils.VertexUtils;
+import com.jguru.vertexai.service.VertexAiService;
+import com.jguru.vertexai.service.VertexAiServiceImpl;
+import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.service.dto.AuthenticationType;
+import com.jguru.vertexai.service.dto.GenerationRequest;
+import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.service.dto.RegionCheckRequest;
+import com.jguru.vertexai.service.dto.RegionCheckResult;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -59,6 +66,8 @@ public class VertexAiMasterMain implements Callable<Integer> {
   @Parameters(index = "0", arity = "0..1", description = "The text prompt to send to the model.")
   private String text;
 
+  private final VertexAiService vertexAiService = new VertexAiServiceImpl();
+
   @Override
   public Integer call() throws Exception {
     // Check if we're in region check mode
@@ -73,29 +82,29 @@ public class VertexAiMasterMain implements Callable<Integer> {
       return 1;
     }
 
-    String response;
-    if (auth.apiKeyAuth != null) {
-      response = VertexUtils.generateContent(auth.apiKeyAuth.apiKey, modelName, prompt);
-    } else if (auth.saAuth != null) {
-      if (auth.saAuth.saKeyFile != null && !auth.saAuth.saKeyFile.isEmpty()) {
-        // Use explicit Service Account JSON key file
-        response = VertexUtils.generateContent(auth.saAuth.saKeyFile, auth.saAuth.projectId,
-            auth.saAuth.location, modelName, prompt);
-      } else {
-        // Fallback to ADC
-        response = VertexUtils.generateContent(auth.saAuth.projectId, auth.saAuth.location,
-            modelName, prompt);
-      }
-    } else {
-      System.err.println("Error: Please provide either API key or Service Account credentials.");
+    // Create authentication config
+    AuthenticationConfig authConfig = createAuthenticationConfig();
+    if (authConfig == null) {
       return 1;
     }
 
-    System.out.println(response);
-    return 0;
+    // Create generation request
+    GenerationRequest request = GenerationRequest.builder().withAuthenticationConfig(authConfig)
+        .withModelName(modelName).withText(prompt).build();
+
+    // Generate content using service
+    GenerationResult result = vertexAiService.generateContent(request);
+
+    if (result.isSuccess()) {
+      System.out.println(result.getContent());
+      return 0;
+    } else {
+      System.err.println("Error: " + result.getErrorMessage());
+      return 1;
+    }
   }
 
-  private Integer performRegionCheck() {
+  private Integer performRegionCheck() throws Exception {
     if (auth.saAuth == null) {
       System.err.println("Error: Region check requires Service Account authentication.");
       return 1;
@@ -126,62 +135,69 @@ public class VertexAiMasterMain implements Callable<Integer> {
     System.out.println("Test prompt: " + testPrompt);
     System.out.println("\nTesting...");
 
-    Map<String, String> results = VertexUtils.checkConnectivityAvailability(saKeyFile,
-        auth.saAuth.projectId, modelName, regions, testPrompt);
+    // Create authentication config
+    AuthenticationConfig authConfig = AuthenticationConfig.builder()
+        .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
+        .withSaKeyFile(saKeyFile).build();
+
+    // Create region check request
+    RegionCheckRequest request = RegionCheckRequest.builder().withAuthenticationConfig(authConfig)
+        .withModelName(modelName).withCluster(cluster).withTestPrompt(testPrompt)
+        .withRegions(regions).build();
+
+    // Check region availability using service
+    RegionCheckResult result = vertexAiService.checkRegionAvailability(request);
 
     // Display results
-    int successCount = 0;
-    int failCount = 0;
+    int successCount = result.getSuccessCount();
+    int failCount = result.getFailCount();
 
     System.out.println("\n=== Results ===");
-    for (Map.Entry<String, String> entry : results.entrySet()) {
+    for (Map.Entry<String, String> entry : result.getRegionResults().entrySet()) {
       String region = entry.getKey();
-      String result = entry.getValue();
-      boolean success = "SUCCESS".equals(result);
+      String status = entry.getValue();
+      boolean success = "SUCCESS".equals(status);
 
       if (success) {
-        System.out.println("✓ " + region + ": " + result);
-        successCount++;
+        System.out.println("✓ " + region + ": " + status);
       } else {
-        System.err.println("✗ " + region + ": " + result);
-        failCount++;
+        System.err.println("✗ " + region + ": " + status);
       }
     }
 
     System.out.println("\n=== Summary ===");
-    System.out.println("Total: " + regions.size());
+    System.out.println("Total: " + result.getTotalCount());
     System.out.println("Success: " + successCount);
     System.out.println("Failed: " + failCount);
 
-    return successCount > 0 ? 0 : 1;
+    return result.hasSuccess() ? 0 : 1;
   }
 
   private List<String> getRegionsForCluster(String clusterName) {
-    String upperCluster = clusterName.toUpperCase();
-    switch (upperCluster) {
-      case "US" :
-      case "USA" :
-        return VertexUtils.US_REGIONS;
-      case "EU" :
-      case "EUROPE" :
-        return VertexUtils.EUROPE_REGIONS;
-      case "ASIA" :
-      case "APAC" :
-      case "ASIA_PACIFIC" :
-        return VertexUtils.ASIA_REGIONS;
-      case "MIDDLE_EAST" :
-      case "ME" :
-        return VertexUtils.MIDDLE_EAST_REGIONS;
-      case "AFRICA" :
-        return VertexUtils.AFRICA_REGIONS;
-      case "CANADA" :
-      case "CA" :
-        return VertexUtils.CANADA_REGIONS;
-      case "SOUTH_AMERICA" :
-      case "SA" :
-        return VertexUtils.SOUTH_AMERICA_REGIONS;
-      default :
-        return null;
+    return ((VertexAiServiceImpl) vertexAiService).getRegionsForCluster(clusterName);
+
+  }
+
+  private AuthenticationConfig createAuthenticationConfig() {
+    if (auth.apiKeyAuth != null) {
+      return AuthenticationConfig.builder().withType(AuthenticationType.API_KEY)
+          .withApiKey(auth.apiKeyAuth.apiKey).build();
+    } else if (auth.saAuth != null) {
+      if (auth.saAuth.saKeyFile != null && !auth.saAuth.saKeyFile.isEmpty()) {
+        // Use explicit Service Account JSON key file
+        return AuthenticationConfig.builder()
+            .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+            .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
+            .withSaKeyFile(auth.saAuth.saKeyFile).build();
+      } else {
+        // Fallback to ADC
+        return AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+            .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location).build();
+      }
+    } else {
+      System.err.println("Error: Please provide either API key or Service Account credentials.");
+      return null;
     }
   }
 

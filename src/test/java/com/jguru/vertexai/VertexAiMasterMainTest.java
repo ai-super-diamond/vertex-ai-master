@@ -389,7 +389,7 @@ class VertexAiMasterMainTest {
     assertThat(workingKeyFile).as("Working Service Account key file should exist").exists();
 
     // Test a 404 model across all US regions to find where it's actually deployed
-    String testModelAlias = "deepseek.ocr"; // Pick a model that returned 404
+    String testModelAlias = "openai.gpt.oss.120b"; // Pick a model that returned 404
     String testPrompt = "200+200*99=?";
 
     // All US regions to test
