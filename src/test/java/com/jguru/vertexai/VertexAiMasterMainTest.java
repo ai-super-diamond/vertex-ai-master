@@ -2,6 +2,8 @@ package com.jguru.vertexai;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
@@ -19,10 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import com.jguru.vertexai.service.VertexAiServiceImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class VertexAiMasterMainTest {
+
+  private static final Logger logger = LoggerFactory.getLogger(VertexAiMasterMainTest.class);
 
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
@@ -66,7 +72,7 @@ class VertexAiMasterMainTest {
       // Verify response is not empty
       assertThat(output.trim()).as("Response should not be empty").isNotEmpty();
 
-      System.out.println("[TEST] Response received: " + output.trim());
+      logger.info("[TEST] Response received: {}", output.trim());
 
     } finally {
       // Restore original streams FIRST
@@ -76,12 +82,10 @@ class VertexAiMasterMainTest {
 
     // Print captured output for debugging (after streams are restored)
     if (outContent.size() > 0) {
-      System.out.println("=== CLI Output ===");
-      System.out.println(outContent.toString());
+      logger.info("=== CLI Output ===\n{}", outContent.toString());
     }
     if (errContent.size() > 0) {
-      System.err.println("=== CLI Error Output ===");
-      System.err.println(errContent.toString());
+      logger.error("=== CLI Error Output ===\n{}", errContent.toString());
     }
   }
 
@@ -128,11 +132,9 @@ class VertexAiMasterMainTest {
     String errorOutput = errContent.toString();
 
     // Print output for debugging (after stream is restored)
-    System.err.println("=== Error Output (Expired Key Test) ===");
-    System.err.println(errorOutput);
+    logger.error("=== Error Output (Expired Key Test) ===\n{}", errorOutput);
     if (output.length() > 0) {
-      System.out.println("=== Output (Expired Key Test) ===");
-      System.out.println(output);
+      logger.info("=== Output (Expired Key Test) ===\n{}", output);
     }
 
     // Verify error message indicates authentication/token failure (not ADC fallback)
@@ -223,7 +225,7 @@ class VertexAiMasterMainTest {
     String csvFileName = "model-test-results_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
-    System.out.println("Starting model validation test. Results will be saved to: " + csvFileName);
+    logger.info("Starting model validation test. Results will be saved to: {}", csvFileName);
 
     int passedCount = 0;
     int failedCount = 0;
@@ -237,7 +239,7 @@ class VertexAiMasterMainTest {
         // Get region for this model from properties
         String region = modelProps.getProperty(modelAlias + ".region", "us-central1");
 
-        System.out.println("\nTesting model: " + modelAlias + " (region: " + region + ")");
+        logger.info("\nTesting model: {} (region: {})", modelAlias, region);
 
         String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
             "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
@@ -292,7 +294,7 @@ class VertexAiMasterMainTest {
             answer = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
 
             passedCount++;
-            System.out.println("[PASS] " + modelAlias + " - Answer: " + answer);
+            logger.info("[PASS] {} - Answer: {}", modelAlias, answer);
           } else {
             // Extract meaningful error message from error output
             String errorMsg = "Unknown error";
@@ -346,7 +348,7 @@ class VertexAiMasterMainTest {
 
             answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
             failedCount++;
-            System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
+            logger.error("[FAIL] {} - {}", modelAlias, errorMsg);
           }
 
         } catch (Exception e) {
@@ -360,7 +362,7 @@ class VertexAiMasterMainTest {
           String errorMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
           answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
           failedCount++;
-          System.err.println("[FAIL] " + modelAlias + " - " + errorMsg);
+          logger.error("[FAIL] {} - {}", modelAlias, errorMsg);
         }
 
         // Write to CSV: full-model-name,region,city,answer
@@ -371,11 +373,11 @@ class VertexAiMasterMainTest {
       }
     }
 
-    System.out.println("\n=== Test Summary ===");
-    System.out.println("Total models: " + modelAliases.size());
-    System.out.println("Passed: " + passedCount);
-    System.out.println("Failed: " + failedCount);
-    System.out.println("Results saved to: " + csvFileName);
+    logger.info("\n=== Test Summary ===");
+    logger.info("Total models: {}", modelAliases.size());
+    logger.info("Passed: {}", passedCount);
+    logger.info("Failed: {}", failedCount);
+    logger.info("Results saved to: {}", csvFileName);
   }
 
   @Test
@@ -401,8 +403,8 @@ class VertexAiMasterMainTest {
     String csvFileName = "region-discovery_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
-    System.out.println("Testing model '" + testModelAlias + "' across all US regions...");
-    System.out.println("Results will be saved to: " + csvFileName);
+    logger.info("Testing model '{}' across all US regions...", testModelAlias);
+    logger.info("Results will be saved to: {}", csvFileName);
 
     int successCount = 0;
     int failCount = 0;
@@ -412,7 +414,7 @@ class VertexAiMasterMainTest {
       csvWriter.println("model-alias,region,status,response");
 
       for (String region : usRegions) {
-        System.out.println("\nTesting region: " + region);
+        logger.info("\nTesting region: {}", region);
 
         String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
             "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
@@ -447,7 +449,7 @@ class VertexAiMasterMainTest {
               response = response.substring(0, 100) + "...";
             }
             successCount++;
-            System.out.println("  ✓ [PASS] " + region + " - Model works!");
+            logger.info("  ✓ [PASS] {} - Model works!", region);
           } else {
             // Extract error message
             if (errorOutput.contains("404")) {
@@ -473,7 +475,7 @@ class VertexAiMasterMainTest {
               response = "Unknown error - exit code: " + exitCode;
             }
             failCount++;
-            System.err.println("  ✗ [FAIL] " + region + " - " + response);
+            logger.error("  ✗ [FAIL] {} - {}", region, response);
           }
 
         } catch (Exception e) {
@@ -485,7 +487,7 @@ class VertexAiMasterMainTest {
             response = response.substring(0, 100) + "...";
           }
           failCount++;
-          System.err.println("  ✗ [FAIL] " + region + " - " + response);
+          logger.error("  ✗ [FAIL] {} - {}", region, response);
         }
 
         // Write to CSV
@@ -496,12 +498,12 @@ class VertexAiMasterMainTest {
       }
     }
 
-    System.out.println("\n=== Region Discovery Summary ===");
-    System.out.println("Model: " + testModelAlias);
-    System.out.println("Total regions tested: " + usRegions.size());
-    System.out.println("Successful: " + successCount);
-    System.out.println("Failed: " + failCount);
-    System.out.println("Results saved to: " + csvFileName);
+    logger.info("\n=== Region Discovery Summary ===");
+    logger.info("Model: {}", testModelAlias);
+    logger.info("Total regions tested: {}", usRegions.size());
+    logger.info("Successful: {}", successCount);
+    logger.info("Failed: {}", failCount);
+    logger.info("Results saved to: {}", csvFileName);
 
     // Assert that at least one region worked
     assertThat(successCount)
@@ -532,9 +534,8 @@ class VertexAiMasterMainTest {
     String csvFileName = "deepseek-r1-region-discovery_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
-    System.out
-        .println("Testing DeepSeek R1 model '" + testModelAlias + "' across all US regions...");
-    System.out.println("Results will be saved to: " + csvFileName);
+    logger.info("Testing DeepSeek R1 model '{}' across all US regions...", testModelAlias);
+    logger.info("Results will be saved to: {}", csvFileName);
 
     int successCount = 0;
     int failCount = 0;
@@ -544,7 +545,7 @@ class VertexAiMasterMainTest {
       csvWriter.println("model-alias,region,city,status,response");
 
       for (String region : usRegions) {
-        System.out.println("\nTesting region: " + region);
+        logger.info("\nTesting region: {}", region);
 
         String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
             "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
@@ -579,7 +580,7 @@ class VertexAiMasterMainTest {
               response = response.substring(0, 100) + "...";
             }
             successCount++;
-            System.out.println("  ✓ [PASS] " + region + " - DeepSeek R1 works!");
+            logger.info("  ✓ [PASS] {} - DeepSeek R1 works!", region);
           } else {
             // Extract error message
             if (errorOutput.contains("404")) {
@@ -605,7 +606,7 @@ class VertexAiMasterMainTest {
               response = "Unknown error - exit code: " + exitCode;
             }
             failCount++;
-            System.err.println("  ✗ [FAIL] " + region + " - " + response);
+            logger.error("  ✗ [FAIL] {} - {}", region, response);
           }
 
         } catch (Exception e) {
@@ -617,7 +618,7 @@ class VertexAiMasterMainTest {
             response = response.substring(0, 100) + "...";
           }
           failCount++;
-          System.err.println("  ✗ [FAIL] " + region + " - " + response);
+          logger.error("  ✗ [FAIL] {} - {}", region, response);
         }
 
         // Write to CSV
@@ -628,16 +629,150 @@ class VertexAiMasterMainTest {
       }
     }
 
-    System.out.println("\n=== DeepSeek R1 Region Discovery Summary ===");
-    System.out.println("Model: " + testModelAlias);
-    System.out.println("Total regions tested: " + usRegions.size());
-    System.out.println("Successful: " + successCount);
-    System.out.println("Failed: " + failCount);
-    System.out.println("Results saved to: " + csvFileName);
+    logger.info("\n=== DeepSeek R1 Region Discovery Summary ===");
+    logger.info("Model: {}", testModelAlias);
+    logger.info("Total regions tested: {}", usRegions.size());
+    logger.info("Successful: {}", successCount);
+    logger.info("Failed: {}", failCount);
+    logger.info("Results saved to: {}", csvFileName);
 
     // Assert that at least one region worked
     assertThat(successCount)
         .as("At least one US region should support DeepSeek R1 model '" + testModelAlias + "'")
         .isGreaterThan(0);
+  }
+
+  @Test
+  @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
+  void shouldDiscoverMiniMaxWorldwide() throws IOException {
+    // Given: Working Service Account key file path
+    String workingKeyPath = "keys\\working.json";
+    File workingKeyFile = new File(workingKeyPath);
+
+    // Verify the working key file exists
+    assertThat(workingKeyFile).as("Working Service Account key file should exist").exists();
+
+    String testModelAlias = "minimax.m2";
+    String testPrompt = "200+200*99=?";
+
+    // Build combined region list from service constants
+    List<String> allRegions = Stream
+        .of(VertexAiServiceImpl.US_REGIONS, VertexAiServiceImpl.EUROPE_REGIONS,
+            VertexAiServiceImpl.ASIA_REGIONS, VertexAiServiceImpl.MIDDLE_EAST_REGIONS,
+            VertexAiServiceImpl.AFRICA_REGIONS, VertexAiServiceImpl.CANADA_REGIONS,
+            VertexAiServiceImpl.SOUTH_AMERICA_REGIONS)
+        .flatMap(List::stream).collect(Collectors.toList());
+
+    // Create CSV file with timestamp
+    String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+    String csvFileName = "minimax-region-discovery_" + timestamp + ".csv";
+    File csvFile = new File(csvFileName);
+
+    logger.info("Testing MiniMax model '{}' across worldwide regions...", testModelAlias);
+    logger.info("Results will be saved to: {}", csvFileName);
+
+    int successCount = 0;
+    int failCount = 0;
+
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+      // CSV Header
+      csvWriter.println("model-alias,region,city,status,response");
+
+      for (String region : allRegions) {
+        logger.info("\nTesting region: {}", region);
+
+        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
+            "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
+
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        PrintStream originalErr = System.err;
+
+        String status = "FAIL";
+        String response = "";
+
+        try {
+          System.setOut(new PrintStream(outContent));
+          System.setErr(new PrintStream(errContent));
+
+          VertexAiMasterMain app = new VertexAiMasterMain();
+          CommandLine cmd = new CommandLine(app);
+          int exitCode = cmd.execute(args);
+
+          // Restore streams
+          System.setOut(originalOut);
+          System.setErr(originalErr);
+
+          String output = outContent.toString().trim();
+          String errorOutput = errContent.toString();
+
+          if (exitCode == 0 && !output.isEmpty()) {
+            status = "PASS";
+            response = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
+            if (response.length() > 100) {
+              response = response.substring(0, 100) + "...";
+            }
+            successCount++;
+            logger.info("  ✓ [PASS] {} - MiniMax works!", region);
+          } else {
+            // Extract error message
+            if (errorOutput.contains("404")) {
+              response = "404 Not Found";
+            } else if (errorOutput.contains("403")) {
+              response = "403 Permission Denied";
+            } else if (errorOutput.contains("400")) {
+              response = "400 Bad Request";
+            } else if (errorOutput.contains("500")) {
+              response = "500 Internal Error";
+            } else if (errorOutput.contains("Exception")) {
+              String[] lines = errorOutput.split("\\n");
+              for (String line : lines) {
+                if (line.contains("Exception")) {
+                  response = line.trim();
+                  if (response.length() > 100) {
+                    response = response.substring(0, 100) + "...";
+                  }
+                  break;
+                }
+              }
+            } else {
+              response = "Unknown error - exit code: " + exitCode;
+            }
+            failCount++;
+            logger.error("  ✗ [FAIL] {} - {}", region, response);
+          }
+
+        } catch (Exception e) {
+          System.setOut(originalOut);
+          System.setErr(originalErr);
+
+          response = e.getClass().getSimpleName() + ": " + e.getMessage();
+          if (response.length() > 100) {
+            response = response.substring(0, 100) + "...";
+          }
+          failCount++;
+          logger.error("  ✗ [FAIL] {} - {}", region, response);
+        }
+
+        // Write to CSV
+        String city = getRegionCity(region);
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias,
+            region, city, status, response));
+        csvWriter.flush();
+      }
+    }
+
+    logger.info("\n=== MiniMax Worldwide Region Discovery Summary ===");
+    logger.info("Model: {}", testModelAlias);
+    logger.info("Total regions tested: {}", allRegions.size());
+    logger.info("Successful: {}", successCount);
+    logger.info("Failed: {}", failCount);
+    logger.info("Results saved to: {}", csvFileName);
+
+    // Validate coverage: all regions processed
+    assertThat(successCount + failCount)
+        .as("All regions should be processed for '" + testModelAlias + "'")
+        .isEqualTo(allRegions.size());
   }
 }

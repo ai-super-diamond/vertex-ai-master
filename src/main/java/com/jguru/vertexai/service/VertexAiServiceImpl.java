@@ -7,6 +7,8 @@ import com.jguru.vertexai.service.dto.GenerationRequest;
 import com.jguru.vertexai.service.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -24,6 +26,8 @@ import java.util.Properties;
  * Implementation of VertexAiService containing all business logic.
  */
 public class VertexAiServiceImpl implements VertexAiService {
+
+  private static final Logger logger = LoggerFactory.getLogger(VertexAiServiceImpl.class);
 
   // US Regions (source: https://cloud.google.com/about/locations - Nov 2025)
   public static final List<String> US_REGIONS = Arrays.asList("us-central1", "us-east1", "us-east4",
@@ -70,11 +74,10 @@ public class VertexAiServiceImpl implements VertexAiService {
         if (Files.exists(configPath)) {
           try (InputStream is = new FileInputStream(configPath.toFile())) {
             modelProperties.load(is);
-            System.err.println("[INFO] Loaded models from: " + configPath);
+            logger.info("Loaded models from: {}", configPath);
             return modelProperties;
           } catch (IOException e) {
-            System.err
-                .println("[WARN] Failed to load external models.properties: " + e.getMessage());
+            logger.warn("Failed to load external models.properties: {}", e.getMessage());
           }
         }
       }
@@ -83,10 +86,10 @@ public class VertexAiServiceImpl implements VertexAiService {
       try (InputStream is = getClass().getResourceAsStream("/models.properties")) {
         if (is != null) {
           modelProperties.load(is);
-          System.err.println("[INFO] Loaded embedded models.properties");
+          logger.info("Loaded embedded models.properties");
         }
       } catch (IOException e) {
-        System.err.println("[WARN] Failed to load embedded models.properties: " + e.getMessage());
+        logger.warn("Failed to load embedded models.properties: {}", e.getMessage());
       }
     }
     return modelProperties;
@@ -100,7 +103,7 @@ public class VertexAiServiceImpl implements VertexAiService {
     Properties props = getModelProperties();
     String resolved = props.getProperty(modelName);
     if (resolved != null) {
-      System.err.println("[INFO] Resolved model alias '" + modelName + "' -> '" + resolved + "'");
+      logger.info("Resolved model alias '{}' -> '{}'", modelName, resolved);
       return resolved;
     }
     return modelName;

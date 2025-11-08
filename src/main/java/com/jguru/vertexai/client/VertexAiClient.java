@@ -3,6 +3,8 @@ package com.jguru.vertexai.client;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -21,6 +23,8 @@ public class VertexAiClient {
   private final String serviceAccountKeyPath;
   private final boolean isApiKeyAuth;
   private final Properties modelProperties;
+
+  private static final Logger logger = LoggerFactory.getLogger(VertexAiClient.class);
 
   /**
    * Constructor for API Key authentication.
@@ -83,7 +87,7 @@ public class VertexAiClient {
         props.load(input);
       }
     } catch (IOException e) {
-      System.err.println("[WARN] Failed to load models.properties: " + e.getMessage());
+      logger.warn("Failed to load models.properties: {}", e.getMessage());
     }
     return props;
   }
@@ -126,9 +130,17 @@ public class VertexAiClient {
         return response.text();
       }
     } else {
-      // Check if this is a MaaS model requiring Chat Completions API
-      String providerPrefix = getProviderPrefix(modelName);
-      boolean useChatCompletions = providerPrefix != null;
+      // Check if this model should use Chat Completions API
+      // First check for explicit OpenAI flag
+      String openAiFlag = modelProperties.getProperty(modelName + ".openai");
+      boolean useChatCompletions = "true".equalsIgnoreCase(openAiFlag);
+
+      // If not explicitly set, check for MaaS models (backward compatibility)
+      String providerPrefix = null;
+      if (!useChatCompletions) {
+        providerPrefix = getProviderPrefix(modelName);
+        useChatCompletions = providerPrefix != null;
+      }
 
       // Load credentials if explicit key path provided
       GoogleCredentials credentials = null;
@@ -145,7 +157,7 @@ public class VertexAiClient {
 
       if (useChatCompletions) {
         // Use Chat Completions API for MaaS models
-        System.err.println("[INFO] Using Chat Completions API for MaaS model: " + modelName);
+        logger.info("Using Chat Completions API for model: {}", modelName);
 
         if (credentials == null) {
           // Use ADC for Chat Completions
@@ -155,8 +167,14 @@ public class VertexAiClient {
 
         ChatCompletionsClient chatClient = new ChatCompletionsClient(projectId, location,
             credentials);
-        String modelWithPrefix = providerPrefix + "/" + modelName;
-        System.err.println("[INFO] Model name with provider: " + modelWithPrefix);
+
+        // For models with OpenAI flag, use the model name directly
+        // For MaaS models, prepend the provider prefix
+        String modelWithPrefix = modelName;
+        if (providerPrefix != null) {
+          modelWithPrefix = providerPrefix + "/" + modelName;
+          logger.info("Model name with provider: {}", modelWithPrefix);
+        }
         return chatClient.generateContent(modelWithPrefix, text);
       } else {
         // Use standard Vertex AI API for Gemini and Llama models

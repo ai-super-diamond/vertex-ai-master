@@ -5,6 +5,8 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,6 +23,8 @@ import java.util.Date;
  * (Model-as-a-Service) models that require the /chat/completions endpoint.
  */
 public class ChatCompletionsClient {
+
+  private static final Logger logger = LoggerFactory.getLogger(ChatCompletionsClient.class);
 
   private final String projectId;
   private final String location;
@@ -58,9 +62,16 @@ public class ChatCompletionsClient {
    */
   public String generateContent(String modelName, String prompt) throws IOException {
     // Build the endpoint URL
+    String host = "aiplatform.googleapis.com";
+    String endpointLocation = location;
+    if (location != null && !location.equalsIgnoreCase("global")) {
+      host = location + "-aiplatform.googleapis.com";
+    } else if (location != null && location.equalsIgnoreCase("global")) {
+      endpointLocation = "global"; // Explicitly set for global endpoint
+    }
     String endpoint = String.format(
-        "https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions",
-        location, projectId, location);
+        "https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host,
+        projectId, endpointLocation);
 
     // Refresh credentials if needed
     AccessToken accessToken = credentials.getAccessToken();
@@ -102,7 +113,7 @@ public class ChatCompletionsClient {
       if (responseCode >= 200 && responseCode < 300) {
         return parseSuccessResponse(conn);
       } else {
-        throw new IOException(parseErrorResponse(conn, responseCode));
+        throw new IOException(parseErrorResponse(conn, responseCode, modelName));
       }
     } finally {
       conn.disconnect();
@@ -145,7 +156,8 @@ public class ChatCompletionsClient {
   /**
    * Parses error response from the API.
    */
-  private String parseErrorResponse(HttpURLConnection conn, int responseCode) throws IOException {
+  private String parseErrorResponse(HttpURLConnection conn, int responseCode, String modelName)
+      throws IOException {
     StringBuilder error = new StringBuilder();
     try (BufferedReader br = new BufferedReader(
         new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
@@ -163,8 +175,12 @@ public class ChatCompletionsClient {
       if (jsonError.has("error")) {
         JsonObject errorObj = jsonError.getAsJsonObject("error");
         if (errorObj.has("message")) {
-          errorMessage = String.format("HTTP %d: %s", responseCode,
-              errorObj.get("message").getAsString());
+          String message = errorObj.get("message").getAsString();
+          errorMessage = String.format("HTTP %d: %s", responseCode, message);
+          // Add hint for MaaS model access issues
+          if (responseCode == 404 && modelName != null && modelName.contains("-maas")) {
+            errorMessage += " (Hint: Model may not be enabled in your GCP project. Check the model card and click 'Enable'.)";
+          }
         }
       }
     } catch (Exception e) {

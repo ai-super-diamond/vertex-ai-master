@@ -8,6 +8,8 @@ import com.jguru.vertexai.service.dto.GenerationRequest;
 import com.jguru.vertexai.service.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -20,6 +22,7 @@ import java.util.concurrent.Callable;
 
 @Command(name = "vertex-ai", mixinStandardHelpOptions = true, version = "0.0.1", description = "A CLI for interacting with the Vertex AI API.")
 public class VertexAiMasterMain implements Callable<Integer> {
+  private static final Logger logger = LoggerFactory.getLogger(VertexAiMasterMain.class);
 
   static class ApiKeyAuth {
     @Option(names = "--api-key", description = "Your Vertex AI API key.", required = true)
@@ -78,7 +81,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
     // Normal mode: generate content
     String prompt = textOption != null ? textOption : text;
     if (prompt == null || prompt.isEmpty()) {
-      System.err.println("Error: No prompt text provided.");
+      logger.error("No prompt text provided.");
       return 1;
     }
 
@@ -99,27 +102,28 @@ public class VertexAiMasterMain implements Callable<Integer> {
       System.out.println(result.getContent());
       return 0;
     } else {
-      System.err.println("Error: " + result.getErrorMessage());
+      logger.error("Error generating content: {}", result.getErrorMessage());
       return 1;
     }
   }
 
   private Integer performRegionCheck() throws Exception {
     if (auth.saAuth == null) {
-      System.err.println("Error: Region check requires Service Account authentication.");
+      logger.error("Region check requires Service Account authentication.");
       return 1;
     }
 
     if (cluster == null || cluster.isEmpty()) {
-      System.err.println("Error: --cluster (-c) is required with --check-all-regions.");
+      logger.error("--cluster (-c) is required with --check-all-regions.");
       return 1;
     }
 
     // Get regions for the specified cluster
     List<String> regions = getRegionsForCluster(cluster);
     if (regions == null || regions.isEmpty()) {
-      System.err.println("Error: Unknown cluster '" + cluster
-          + "'. Valid options: US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA");
+      logger.error(
+          "Unknown cluster '{}'. Valid options: US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA",
+          cluster);
       return 1;
     }
 
@@ -196,7 +200,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
             .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location).build();
       }
     } else {
-      System.err.println("Error: Please provide either API key or Service Account credentials.");
+      logger.error("Please provide either API key or Service Account credentials.");
       return null;
     }
   }
