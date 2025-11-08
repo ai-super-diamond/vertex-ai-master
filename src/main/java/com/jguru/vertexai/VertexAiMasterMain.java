@@ -8,6 +8,7 @@ import com.jguru.vertexai.service.dto.GenerationRequest;
 import com.jguru.vertexai.service.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
+import com.jguru.vertexai.client.WorldwideAvailabilityClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -63,6 +64,10 @@ public class VertexAiMasterMain implements Callable<Integer> {
       "-c"}, description = "Region cluster to test (US, EU, ASIA, etc.). Used with --check-all-regions.")
   private String cluster;
 
+  @Option(names = {"--worldwide",
+      "-w"}, description = "Check model availability across all worldwide regions.")
+  private boolean worldwide;
+
   @Option(names = {"--text", "-t"}, description = "The test prompt text (for region check mode).")
   private String textOption;
 
@@ -76,6 +81,11 @@ public class VertexAiMasterMain implements Callable<Integer> {
     // Check if we're in region check mode
     if (checkAllRegions) {
       return performRegionCheck();
+    }
+
+    // Check if we're in worldwide check mode
+    if (worldwide) {
+      return performWorldwideCheck();
     }
 
     // Normal mode: generate content
@@ -203,6 +213,61 @@ public class VertexAiMasterMain implements Callable<Integer> {
       logger.error("Please provide either API key or Service Account credentials.");
       return null;
     }
+  }
+
+  private Integer performWorldwideCheck() throws Exception {
+    if (auth.saAuth == null) {
+      logger.error("Worldwide check requires Service Account authentication.");
+      return 1;
+    }
+
+    String testPrompt = (textOption != null && !textOption.isEmpty())
+        ? textOption
+        : (text != null ? text : "200+200*99=?");
+    String saKeyFile = auth.saAuth.saKeyFile != null ? auth.saAuth.saKeyFile : null;
+
+    System.out.println("\n=== Worldwide Region Availability Check ===");
+    System.out.println("Model: " + modelName);
+    System.out.println("Test prompt: " + testPrompt);
+    System.out.println("\nTesting...");
+
+    // Create authentication config
+    AuthenticationConfig authConfig = AuthenticationConfig.builder()
+        .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
+        .withSaKeyFile(saKeyFile).build();
+
+    // Create region check request
+    RegionCheckRequest request = RegionCheckRequest.builder().withAuthenticationConfig(authConfig)
+        .withModelName(modelName).withTestPrompt(testPrompt).build();
+
+    // Check worldwide availability using the client
+    WorldwideAvailabilityClient client = new WorldwideAvailabilityClient(vertexAiService);
+    RegionCheckResult result = client.checkWorldwideAvailability(request);
+
+    // Display results
+    int successCount = result.getSuccessCount();
+    int failCount = result.getFailCount();
+
+    System.out.println("\n=== Results ===");
+    for (Map.Entry<String, String> entry : result.getRegionResults().entrySet()) {
+      String region = entry.getKey();
+      String status = entry.getValue();
+      boolean success = "SUCCESS".equals(status);
+
+      if (success) {
+        System.out.println("✓ " + region + ": " + status);
+      } else {
+        System.err.println("✗ " + region + ": " + status);
+      }
+    }
+
+    System.out.println("\n=== Summary ===");
+    System.out.println("Total: " + result.getTotalCount());
+    System.out.println("Success: " + successCount);
+    System.out.println("Failed: " + failCount);
+
+    return result.hasSuccess() ? 0 : 1;
   }
 
   public static void main(String[] args) {
