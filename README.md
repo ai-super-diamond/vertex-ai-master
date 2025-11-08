@@ -174,26 +174,36 @@ Test model availability across all regions in a geographic cluster:
 # Available clusters: US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA
 ```
 
-**Region check output:**
+### Worldwide Region Availability Check
+
+Test model availability across all worldwide regions (42 GCP regions):
+
+```sh
+# Check Gemini Pro availability worldwide
+./vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --worldwide --model-name gemini.pro "Test prompt"
+
+# Short flags
+./vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -w -m gemini.flash "Test"
 ```
-=== Region Availability Check ===
-Model: deepseek.r1.0528
-Cluster: US
-Regions to test: 9
+
+**Worldwide check output:**
+```
+=== Worldwide Region Availability Check ===
+Model: gemini.pro
 Test prompt: 200+200*99=?
 
 Testing...
 
 === Results ===
 ✓ us-central1: SUCCESS
-✗ us-east1: 404 Not Found
+✓ us-east1: SUCCESS
 ✗ us-west1: 404 Not Found
 ...
 
 === Summary ===
-Total: 9
-Success: 1
-Failed: 8
+Total: 42
+Success: 15
+Failed: 27
 ```
 
 ## Command-Line Options
@@ -222,6 +232,10 @@ Failed: 8
 - `--check-all-regions`, `-car` - Enable region availability testing
 - `--cluster NAME`, `-c NAME` - Geographic cluster to test (US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA)
 
+### Worldwide Region Check Mode
+
+- `--worldwide`, `-w` - Enable worldwide region availability testing across all 42 GCP regions
+
 ### General Options
 
 - `--help`, `-h` - Show help message
@@ -236,7 +250,8 @@ src/main/java/com/jguru/vertexai/
 ├── VertexAiMasterMain.java          # CLI entry point
 ├── client/
 │   ├── VertexAiClient.java          # API client with routing logic
-│   └── ChatCompletionsClient.java   # MaaS Chat Completions API client
+│   ├── ChatCompletionsClient.java   # MaaS Chat Completions API client
+│   └── WorldwideAvailabilityClient.java # Worldwide region testing client
 ├── service/
 │   ├── VertexAiService.java         # Service interface
 │   ├── VertexAiServiceImpl.java     # Business logic implementation
@@ -254,7 +269,9 @@ src/main/resources/
 └── models.properties                # Model configuration
 
 src/test/java/com/jguru/vertexai/
-└── VertexAiMasterMainTest.java     # Integration tests
+├── VertexAiMasterMainTest.java     # Integration tests
+└── client/
+    └── WorldwideAvailabilityClientTest.java # Unit tests for worldwide client
 ```
 
 ### Running Tests
