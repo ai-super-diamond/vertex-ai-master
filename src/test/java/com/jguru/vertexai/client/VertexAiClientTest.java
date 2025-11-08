@@ -26,7 +26,9 @@ class VertexAiClientTest {
 
     // When: Creating a VertexAiClient with this properties file
     Properties props = new Properties();
-    props.load(new java.io.FileReader(propertiesFile));
+    try (java.io.FileReader reader = new java.io.FileReader(propertiesFile)) {
+      props.load(reader);
+    }
 
     // Then: The openai property should be detected
     String openAiFlag = props.getProperty("test.model.openai");
@@ -44,7 +46,9 @@ class VertexAiClientTest {
 
     // When: Creating a VertexAiClient with this properties file
     Properties props = new Properties();
-    props.load(new java.io.FileReader(propertiesFile));
+    try (java.io.FileReader reader = new java.io.FileReader(propertiesFile)) {
+      props.load(reader);
+    }
 
     // Then: The openai property should not be detected
     String openAiFlag = props.getProperty("test.model.openai");
@@ -63,7 +67,9 @@ class VertexAiClientTest {
 
     // When: Loading properties
     Properties props = new Properties();
-    props.load(new java.io.FileReader(propertiesFile));
+    try (java.io.FileReader reader = new java.io.FileReader(propertiesFile)) {
+      props.load(reader);
+    }
 
     // Then: Both provider and openai properties should be detected
     String provider = props.getProperty("maas.model.provider");

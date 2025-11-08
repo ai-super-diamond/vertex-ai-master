@@ -3,6 +3,8 @@ package com.jguru.vertexai.client;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
+import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.service.dto.AuthenticationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,28 +19,27 @@ import java.util.Properties;
  */
 public class VertexAiClient {
 
-  private final String apiKey;
-  private final String projectId;
-  private final String location;
-  private final String serviceAccountKeyPath;
-  private final boolean isApiKeyAuth;
+  private final AuthenticationConfig authConfig;
   private final Properties modelProperties;
 
   private static final Logger logger = LoggerFactory.getLogger(VertexAiClient.class);
+
+  public VertexAiClient(AuthenticationConfig authConfig) {
+    this.authConfig = authConfig;
+    this.modelProperties = loadModelProperties();
+  }
 
   /**
    * Constructor for API Key authentication.
    *
    * @param apiKey
    *          The API key for authentication
+   * @deprecated Use {@link #VertexAiClient(AuthenticationConfig)} instead.
    */
+  @Deprecated
   public VertexAiClient(String apiKey) {
-    this.apiKey = apiKey;
-    this.projectId = null;
-    this.location = null;
-    this.serviceAccountKeyPath = null;
-    this.isApiKeyAuth = true;
-    this.modelProperties = loadModelProperties();
+    this(AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey(apiKey)
+        .build());
   }
 
   /**
@@ -48,14 +49,12 @@ public class VertexAiClient {
    *          Google Cloud project ID
    * @param location
    *          Google Cloud location (e.g., us-central1)
+   * @deprecated Use {@link #VertexAiClient(AuthenticationConfig)} instead.
    */
+  @Deprecated
   public VertexAiClient(String projectId, String location) {
-    this.apiKey = null;
-    this.projectId = projectId;
-    this.location = location;
-    this.serviceAccountKeyPath = null;
-    this.isApiKeyAuth = false;
-    this.modelProperties = loadModelProperties();
+    this(AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId(projectId).withLocation(location).build());
   }
 
   /**
@@ -67,14 +66,13 @@ public class VertexAiClient {
    *          Google Cloud project ID
    * @param location
    *          Google Cloud location
+   * @deprecated Use {@link #VertexAiClient(AuthenticationConfig)} instead.
    */
+  @Deprecated
   public VertexAiClient(String serviceAccountKeyPath, String projectId, String location) {
-    this.apiKey = null;
-    this.projectId = projectId;
-    this.location = location;
-    this.serviceAccountKeyPath = serviceAccountKeyPath;
-    this.isApiKeyAuth = false;
-    this.modelProperties = loadModelProperties();
+    this(AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withSaKeyFile(serviceAccountKeyPath).withProjectId(projectId).withLocation(location)
+        .build());
   }
 
   /**
@@ -123,9 +121,9 @@ public class VertexAiClient {
    *           If the API call fails
    */
   public String callVertexAi(String modelName, String text) throws IOException {
-    if (isApiKeyAuth) {
+    if (authConfig.getType() == AuthenticationType.API_KEY) {
       // Use API Key authentication (Gemini API)
-      try (Client client = Client.builder().apiKey(apiKey).build()) {
+      try (Client client = Client.builder().apiKey(authConfig.getApiKey()).build()) {
         GenerateContentResponse response = client.models.generateContent(modelName, text, null);
         return response.text();
       }
@@ -144,12 +142,13 @@ public class VertexAiClient {
 
       // Load credentials if explicit key path provided
       GoogleCredentials credentials = null;
-      if (serviceAccountKeyPath != null) {
+      if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY) {
         try {
-          credentials = GoogleCredentials.fromStream(new FileInputStream(serviceAccountKeyPath))
+          credentials = GoogleCredentials.fromStream(new FileInputStream(authConfig.getSaKeyFile()))
               .createScoped("https://www.googleapis.com/auth/cloud-platform");
         } catch (IOException e) {
-          throw new IOException("Failed to load service account key from: " + serviceAccountKeyPath
+          throw new IOException("Failed to load service account key from: "
+              + authConfig.getSaKeyFile()
               + ". The file must be a valid JSON service account key. ADC fallback is disabled when --sa-key-file is specified.",
               e);
         }
@@ -165,8 +164,8 @@ public class VertexAiClient {
               .createScoped("https://www.googleapis.com/auth/cloud-platform");
         }
 
-        ChatCompletionsClient chatClient = new ChatCompletionsClient(projectId, location,
-            credentials);
+        ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(),
+            authConfig.getLocation(), credentials);
 
         // For models with OpenAI flag, use the model name directly
         // For MaaS models, prepend the provider prefix
@@ -179,13 +178,13 @@ public class VertexAiClient {
       } else {
         // Use standard Vertex AI API for Gemini and Llama models
         System.setProperty("GOOGLE_GENAI_USE_VERTEXAI", "true");
-        System.setProperty("GOOGLE_CLOUD_PROJECT", projectId);
-        System.setProperty("GOOGLE_CLOUD_LOCATION", location);
+        System.setProperty("GOOGLE_CLOUD_PROJECT", authConfig.getProjectId());
+        System.setProperty("GOOGLE_CLOUD_LOCATION", authConfig.getLocation());
 
         if (credentials != null) {
           // Build client with explicit credentials
-          try (Client client = Client.builder().project(projectId).location(location)
-              .credentials(credentials).vertexAI(true).build()) {
+          try (Client client = Client.builder().project(authConfig.getProjectId())
+              .location(authConfig.getLocation()).credentials(credentials).vertexAI(true).build()) {
             GenerateContentResponse response = client.models.generateContent(modelName, text, null);
             return response.text();
           }
@@ -193,8 +192,8 @@ public class VertexAiClient {
           // Use ADC
           System.setProperty("GOOGLE_APPLICATION_CREDENTIALS", "");
 
-          try (Client client = Client.builder().project(projectId).location(location).vertexAI(true)
-              .build()) {
+          try (Client client = Client.builder().project(authConfig.getProjectId())
+              .location(authConfig.getLocation()).vertexAI(true).build()) {
             GenerateContentResponse response = client.models.generateContent(modelName, text, null);
             return response.text();
           }

@@ -2,7 +2,7 @@ package com.jguru.vertexai.service;
 
 import com.jguru.vertexai.client.VertexAiClient;
 import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
+import com.jguru.vertexai.service.dto.ErrorType;
 import com.jguru.vertexai.service.dto.GenerationRequest;
 import com.jguru.vertexai.service.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
@@ -28,6 +28,16 @@ import java.util.Properties;
 public class VertexAiServiceImpl implements VertexAiService {
 
   private static final Logger logger = LoggerFactory.getLogger(VertexAiServiceImpl.class);
+
+  private final RegionProvider regionProvider;
+
+  public VertexAiServiceImpl() {
+    this.regionProvider = new RegionProviderImpl();
+  }
+
+  public VertexAiServiceImpl(RegionProvider regionProvider) {
+    this.regionProvider = regionProvider;
+  }
 
   // US Regions (source: https://cloud.google.com/about/locations - Nov 2025)
   public static final List<String> US_REGIONS = Arrays.asList("us-central1", "us-east1", "us-east4",
@@ -114,47 +124,15 @@ public class VertexAiServiceImpl implements VertexAiService {
    */
   @Override
   public GenerationResult generateContent(GenerationRequest request) throws Exception {
-    AuthenticationConfig authConfig = request.getAuthenticationConfig();
     String resolvedModel = resolveModelName(request.getModelName());
-    String text = request.getText();
 
     try {
-      String response;
-      if (authConfig.getType() == AuthenticationType.API_KEY) {
-        response = generateContentApiKey(authConfig.getApiKey(), resolvedModel, text);
-      } else if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_ADC) {
-        response = generateContentServiceAccountAdc(authConfig.getProjectId(),
-            authConfig.getLocation(), resolvedModel, text);
-      } else if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY) {
-        response = generateContentServiceAccountKey(authConfig.getSaKeyFile(),
-            authConfig.getProjectId(), authConfig.getLocation(), resolvedModel, text);
-      } else {
-        throw new IllegalArgumentException(
-            "Unsupported authentication type: " + authConfig.getType());
-      }
-
+      VertexAiClient client = new VertexAiClient(request.getAuthenticationConfig());
+      String response = client.callVertexAi(resolvedModel, request.getText());
       return GenerationResult.success(response);
     } catch (Exception e) {
       return GenerationResult.failure("Error generating content: " + e.getMessage());
     }
-  }
-
-  private String generateContentApiKey(String apiKey, String modelName, String text)
-      throws IOException {
-    VertexAiClient client = new VertexAiClient(apiKey);
-    return client.callVertexAi(modelName, text);
-  }
-
-  private String generateContentServiceAccountAdc(String projectId, String location,
-      String modelName, String text) throws IOException {
-    VertexAiClient client = new VertexAiClient(projectId, location);
-    return client.callVertexAi(modelName, text);
-  }
-
-  private String generateContentServiceAccountKey(String saKeyPath, String projectId,
-      String location, String modelName, String text) throws IOException {
-    VertexAiClient client = new VertexAiClient(saKeyPath, projectId, location);
-    return client.callVertexAi(modelName, text);
   }
 
   /**
@@ -172,7 +150,10 @@ public class VertexAiServiceImpl implements VertexAiService {
 
     for (String region : request.getRegions()) {
       try {
-        VertexAiClient client = new VertexAiClient(saKeyFile, projectId, region);
+        AuthenticationConfig regionAuthConfig = AuthenticationConfig.builder()
+            .withType(request.getAuthenticationConfig().getType()).withSaKeyFile(saKeyFile)
+            .withProjectId(projectId).withLocation(region).build();
+        VertexAiClient client = new VertexAiClient(regionAuthConfig);
         String response = client.callVertexAi(resolvedModel, prompt);
         if (response != null && !response.isEmpty()) {
           results.put(region, "SUCCESS");
@@ -181,24 +162,13 @@ public class VertexAiServiceImpl implements VertexAiService {
         }
       } catch (IOException e) {
         String errorMsg = e.getMessage();
-        // Extract meaningful error info
-        if (errorMsg.contains("404")) {
-          results.put(region, "404 Not Found");
-        } else if (errorMsg.contains("403")) {
-          results.put(region, "403 Permission Denied");
-        } else if (errorMsg.contains("400")) {
-          results.put(region, "400 Bad Request");
-        } else if (errorMsg.contains("500")) {
-          results.put(region, "500 Internal Error");
-        } else {
-          // Truncate long error messages
-          String shortError = errorMsg.length() > 100
-              ? errorMsg.substring(0, 100) + "..."
-              : errorMsg;
-          results.put(region, "ERROR: " + shortError);
-        }
+        // Extract meaningful error info using ErrorType enum
+        ErrorType errorType = ErrorType.fromMessage(errorMsg);
+        results.put(region, errorType.formatMessage(errorMsg));
       } catch (Exception e) {
-        results.put(region, "ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        String errorMsg = e.getMessage();
+        ErrorType errorType = ErrorType.fromMessage(errorMsg);
+        results.put(region, errorType.formatMessage(errorMsg));
       }
     }
 
@@ -209,31 +179,13 @@ public class VertexAiServiceImpl implements VertexAiService {
    * Gets regions for a specified cluster.
    */
   public List<String> getRegionsForCluster(String clusterName) {
-    String upperCluster = clusterName.toUpperCase();
-    switch (upperCluster) {
-      case "US" :
-      case "USA" :
-        return US_REGIONS;
-      case "EU" :
-      case "EUROPE" :
-        return EUROPE_REGIONS;
-      case "ASIA" :
-      case "APAC" :
-      case "ASIA_PACIFIC" :
-        return ASIA_REGIONS;
-      case "MIDDLE_EAST" :
-      case "ME" :
-        return MIDDLE_EAST_REGIONS;
-      case "AFRICA" :
-        return AFRICA_REGIONS;
-      case "CANADA" :
-      case "CA" :
-        return CANADA_REGIONS;
-      case "SOUTH_AMERICA" :
-      case "SA" :
-        return SOUTH_AMERICA_REGIONS;
-      default :
-        return null;
-    }
+    return regionProvider.getRegionsForCluster(clusterName);
+  }
+
+  /**
+   * Gets all regions across all clusters.
+   */
+  public List<String> getAllRegions() {
+    return regionProvider.getAllRegions();
   }
 }

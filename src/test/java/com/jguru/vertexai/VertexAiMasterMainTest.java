@@ -15,14 +15,12 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import com.jguru.vertexai.service.VertexAiServiceImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,7 +66,7 @@ class VertexAiMasterMainTest {
 
       // Verify model alias resolution in stderr
       assertThat(errorOutput).as("Should resolve gemini.pro alias")
-          .contains("[INFO] Resolved model alias 'gemini.pro'");
+          .contains("Resolved model alias 'gemini.pro'");
 
       // Verify response is not empty
       assertThat(output.trim()).as("Response should not be empty").isNotEmpty();
@@ -414,15 +412,8 @@ class VertexAiMasterMainTest {
    * Gets all regions from all region lists in VertexAiServiceImpl
    */
   private List<String> getAllRegions() {
-    List<String> allRegions = new ArrayList<>();
-    allRegions.addAll(VertexAiServiceImpl.US_REGIONS);
-    allRegions.addAll(VertexAiServiceImpl.EUROPE_REGIONS);
-    allRegions.addAll(VertexAiServiceImpl.ASIA_REGIONS);
-    allRegions.addAll(VertexAiServiceImpl.MIDDLE_EAST_REGIONS);
-    allRegions.addAll(VertexAiServiceImpl.AFRICA_REGIONS);
-    allRegions.addAll(VertexAiServiceImpl.CANADA_REGIONS);
-    allRegions.addAll(VertexAiServiceImpl.SOUTH_AMERICA_REGIONS);
-    return allRegions;
+    VertexAiServiceImpl service = new VertexAiServiceImpl();
+    return service.getAllRegions();
   }
 
   @Test
@@ -700,13 +691,9 @@ class VertexAiMasterMainTest {
     String testModelAlias = "minimax.m2";
     String testPrompt = "200+200*99=?";
 
-    // Build combined region list from service constants
-    List<String> allRegions = Stream
-        .of(VertexAiServiceImpl.US_REGIONS, VertexAiServiceImpl.EUROPE_REGIONS,
-            VertexAiServiceImpl.ASIA_REGIONS, VertexAiServiceImpl.MIDDLE_EAST_REGIONS,
-            VertexAiServiceImpl.AFRICA_REGIONS, VertexAiServiceImpl.CANADA_REGIONS,
-            VertexAiServiceImpl.SOUTH_AMERICA_REGIONS)
-        .flatMap(List::stream).collect(Collectors.toList());
+    // Build combined region list from service
+    VertexAiServiceImpl service = new VertexAiServiceImpl();
+    List<String> allRegions = service.getAllRegions();
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
