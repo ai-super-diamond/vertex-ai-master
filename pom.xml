@@ -158,7 +158,7 @@
         <configuration>
           <java>
             <eclipse>
-              <version>4.32.0</version>
+              <version>4.32</version>
               <file>${project.basedir}/eclipse-formatter.xml</file>
             </eclipse>
             <removeUnusedImports/>
@@ -172,6 +172,13 @@
             </sortPom>
           </pom>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <goals>
