@@ -15,6 +15,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -214,9 +215,9 @@ class VertexAiMasterMainTest {
     }
 
     // Extract all model aliases dynamically from properties (exclude .region and .provider)
-    List<String> modelAliases = modelProps.keySet().stream().map(Object::toString)
-        .filter(key -> !key.endsWith(".region") && !key.endsWith(".provider")).sorted()
-        .collect(Collectors.toList());
+    List<String> modelAliases = modelProps.keySet().stream().map(Object::toString).filter(
+        key -> !key.endsWith(".region") && !key.endsWith(".provider") && !key.endsWith(".openai"))
+        .sorted().collect(Collectors.toList());
 
     String testPrompt = "200+200*99=?";
 
@@ -236,148 +237,192 @@ class VertexAiMasterMainTest {
 
       // Test each model
       for (String modelAlias : modelAliases) {
+        // Check if worldwide testing is enabled for this model
+        String worldwideTest = modelProps.getProperty(modelAlias + ".test.worldwide", "false");
+        boolean isWorldwideTest = "true".equalsIgnoreCase(worldwideTest);
+
         // Get region for this model from properties
         String region = modelProps.getProperty(modelAlias + ".region", "us-central1");
 
-        logger.info("\nTesting model: {} (region: {})", modelAlias, region);
+        // If worldwide testing is enabled, test in all regions
+        if (isWorldwideTest) {
+          logger.info("\nTesting model: {} (worldwide testing enabled)", modelAlias);
 
-        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
-            "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
+          // Get all regions to test
+          List<String> allRegions = getAllRegions();
 
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        PrintStream originalErr = System.err;
-
-        String fullModelName = "";
-        String answer = "";
-
-        try {
-          System.setOut(new PrintStream(outContent));
-          System.setErr(new PrintStream(errContent));
-
-          VertexAiMasterMain app = new VertexAiMasterMain();
-          CommandLine cmd = new CommandLine(app);
-          int exitCode = cmd.execute(args);
-
-          // Restore streams immediately to print results
-          System.setOut(originalOut);
-          System.setErr(originalErr);
-
-          String output = outContent.toString().trim();
-          String errorOutput = errContent.toString();
-
-          // Extract full model name from error output
-          if (errorOutput.contains("[INFO] Resolved model alias")) {
-            String[] lines = errorOutput.split("\\n");
-            for (String line : lines) {
-              if (line.contains("[INFO] Resolved model alias")) {
-                int arrowIndex = line.indexOf("-> '");
-                if (arrowIndex != -1) {
-                  int endIndex = line.indexOf("'", arrowIndex + 4);
-                  if (endIndex != -1) {
-                    fullModelName = line.substring(arrowIndex + 4, endIndex);
-                  }
-                }
-                break;
-              }
-            }
+          // Test in each region
+          for (String testRegion : allRegions) {
+            passedCount += testModelInRegion(modelAlias, testRegion, workingKeyPath, testPrompt,
+                csvWriter, modelProps);
           }
-
-          // Default to alias if full name not found
-          if (fullModelName.isEmpty()) {
-            fullModelName = modelAlias;
-          }
-
-          if (exitCode == 0 && !output.isEmpty()) {
-            // Remove all newlines and carriage returns for single-line CSV output
-            answer = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
-
-            passedCount++;
-            logger.info("[PASS] {} - Answer: {}", modelAlias, answer);
-          } else {
-            // Extract meaningful error message from error output
-            String errorMsg = "Unknown error";
-
-            // Try to find specific error messages in stderr
-            if (errorOutput.contains("[ERROR]")) {
-              // Extract the first ERROR line
-              String[] lines = errorOutput.split("\\n");
-              for (String line : lines) {
-                if (line.contains("[ERROR]")) {
-                  // Remove [ERROR] prefix and timestamp
-                  errorMsg = line.replaceFirst(".*\\[ERROR\\]\\s*", "").trim();
-                  break;
-                }
-              }
-            } else if (errorOutput.contains("Exception") || errorOutput.contains("Error")) {
-              // Look for exception messages
-              String[] lines = errorOutput.split("\\n");
-              for (String line : lines) {
-                if (line.contains("Exception")
-                    || (line.contains("Error") && !line.contains("[INFO]"))) {
-                  errorMsg = line.trim();
-                  // If line is too long, try to extract just the exception message
-                  if (errorMsg.length() > 200) {
-                    int colonIdx = errorMsg.indexOf(":");
-                    if (colonIdx > 0 && colonIdx < errorMsg.length() - 1) {
-                      errorMsg = errorMsg.substring(0, colonIdx + 1) + errorMsg
-                          .substring(colonIdx + 1, Math.min(errorMsg.length(), colonIdx + 150));
-                    }
-                  }
-                  break;
-                }
-              }
-            } else if (errorOutput.contains("PERMISSION_DENIED")
-                || errorOutput.contains("UNAUTHENTICATED")) {
-              errorMsg = "Permission denied or authentication failed";
-            } else if (errorOutput.contains("NOT_FOUND")) {
-              errorMsg = "Model or resource not found";
-            } else if (errorOutput.contains("RESOURCE_EXHAUSTED")) {
-              errorMsg = "Quota exceeded or resource exhausted";
-            } else if (errorOutput.contains("INVALID_ARGUMENT")) {
-              errorMsg = "Invalid argument in request";
-            } else if (!output.isEmpty()) {
-              errorMsg = output.trim();
-              if (errorMsg.length() > 150) {
-                errorMsg = errorMsg.substring(0, 150) + "...";
-              }
-            } else if (exitCode != 0) {
-              errorMsg = "Exit code: " + exitCode + " (no error details captured)";
-            }
-
-            answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
-            failedCount++;
-            logger.error("[FAIL] {} - {}", modelAlias, errorMsg);
-          }
-
-        } catch (Exception e) {
-          System.setOut(originalOut);
-          System.setErr(originalErr);
-
-          if (fullModelName.isEmpty()) {
-            fullModelName = modelAlias;
-          }
-
-          String errorMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
-          answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
-          failedCount++;
-          logger.error("[FAIL] {} - {}", modelAlias, errorMsg);
+        } else {
+          // Normal single region test
+          logger.info("\nTesting model: {} (region: {})", modelAlias, region);
+          passedCount += testModelInRegion(modelAlias, region, workingKeyPath, testPrompt,
+              csvWriter, modelProps);
         }
-
-        // Write to CSV: full-model-name,region,city,answer
-        String city = getRegionCity(region);
-        csvWriter.println(
-            String.format("\"%s\",\"%s\",\"%s\",\"%s\"", fullModelName, region, city, answer));
-        csvWriter.flush();
       }
     }
 
     logger.info("\n=== Test Summary ===");
-    logger.info("Total models: {}", modelAliases.size());
+    logger.info("Total tests executed: {}", passedCount + failedCount);
     logger.info("Passed: {}", passedCount);
     logger.info("Failed: {}", failedCount);
     logger.info("Results saved to: {}", csvFileName);
+  }
+
+  /**
+   * Tests a model in a specific region and returns 1 if passed, 0 if failed.
+   */
+  private int testModelInRegion(String modelAlias, String region, String workingKeyPath,
+      String testPrompt, PrintWriter csvWriter, Properties modelProps) {
+    int passed = 0;
+
+    String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
+        "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
+
+    ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    PrintStream originalErr = System.err;
+
+    String fullModelName = "";
+    String answer = "";
+
+    try {
+      System.setOut(new PrintStream(outContent));
+      System.setErr(new PrintStream(errContent));
+
+      VertexAiMasterMain app = new VertexAiMasterMain();
+      CommandLine cmd = new CommandLine(app);
+      int exitCode = cmd.execute(args);
+
+      // Restore streams immediately to print results
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+
+      String output = outContent.toString().trim();
+      String errorOutput = errContent.toString();
+
+      // Extract full model name from error output
+      if (errorOutput.contains("[INFO] Resolved model alias")) {
+        String[] lines = errorOutput.split("\\n");
+        for (String line : lines) {
+          if (line.contains("[INFO] Resolved model alias")) {
+            int arrowIndex = line.indexOf("-> '");
+            if (arrowIndex != -1) {
+              int endIndex = line.indexOf("'", arrowIndex + 4);
+              if (endIndex != -1) {
+                fullModelName = line.substring(arrowIndex + 4, endIndex);
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      // Default to alias if full name not found
+      if (fullModelName.isEmpty()) {
+        fullModelName = modelAlias;
+      }
+
+      if (exitCode == 0 && !output.isEmpty()) {
+        // Remove all newlines and carriage returns for single-line CSV output
+        answer = output.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
+
+        passed = 1;
+        logger.info("[PASS] {} in {} - Answer: {}", modelAlias, region, answer);
+      } else {
+        // Extract meaningful error message from error output
+        String errorMsg = "Unknown error";
+
+        // Try to find specific error messages in stderr
+        if (errorOutput.contains("[ERROR]")) {
+          // Extract the first ERROR line
+          String[] lines = errorOutput.split("\\n");
+          for (String line : lines) {
+            if (line.contains("[ERROR]")) {
+              // Remove [ERROR] prefix and timestamp
+              errorMsg = line.replaceFirst(".*\\[ERROR\\]\\s*", "").trim();
+              break;
+            }
+          }
+        } else if (errorOutput.contains("Exception") || errorOutput.contains("Error")) {
+          // Look for exception messages
+          String[] lines = errorOutput.split("\\n");
+          for (String line : lines) {
+            if (line.contains("Exception")
+                || (line.contains("Error") && !line.contains("[INFO]"))) {
+              errorMsg = line.trim();
+              // If line is too long, try to extract just the exception message
+              if (errorMsg.length() > 200) {
+                int colonIdx = errorMsg.indexOf(":");
+                if (colonIdx > 0 && colonIdx < errorMsg.length() - 1) {
+                  errorMsg = errorMsg.substring(0, colonIdx + 1) + errorMsg.substring(colonIdx + 1,
+                      Math.min(errorMsg.length(), colonIdx + 150));
+                }
+              }
+              break;
+            }
+          }
+        } else if (errorOutput.contains("PERMISSION_DENIED")
+            || errorOutput.contains("UNAUTHENTICATED")) {
+          errorMsg = "Permission denied or authentication failed";
+        } else if (errorOutput.contains("NOT_FOUND")) {
+          errorMsg = "Model or resource not found";
+        } else if (errorOutput.contains("RESOURCE_EXHAUSTED")) {
+          errorMsg = "Quota exceeded or resource exhausted";
+        } else if (errorOutput.contains("INVALID_ARGUMENT")) {
+          errorMsg = "Invalid argument in request";
+        } else if (!output.isEmpty()) {
+          errorMsg = output.trim();
+          if (errorMsg.length() > 150) {
+            errorMsg = errorMsg.substring(0, 150) + "...";
+          }
+        } else if (exitCode != 0) {
+          errorMsg = "Exit code: " + exitCode + " (no error details captured)";
+        }
+
+        answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
+        logger.error("[FAIL] {} in {} - {}", modelAlias, region, errorMsg);
+      }
+
+    } catch (Exception e) {
+      System.setOut(originalOut);
+      System.setErr(originalErr);
+
+      if (fullModelName.isEmpty()) {
+        fullModelName = modelAlias;
+      }
+
+      String errorMsg = e.getClass().getSimpleName() + ": " + e.getMessage();
+      answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
+      logger.error("[FAIL] {} in {} - {}", modelAlias, region, errorMsg);
+    }
+
+    // Write to CSV: full-model-name,region,city,answer
+    String city = getRegionCity(region);
+    csvWriter
+        .println(String.format("\"%s\",\"%s\",\"%s\",\"%s\"", fullModelName, region, city, answer));
+    csvWriter.flush();
+
+    return passed;
+  }
+
+  /**
+   * Gets all regions from all region lists in VertexAiServiceImpl
+   */
+  private List<String> getAllRegions() {
+    List<String> allRegions = new ArrayList<>();
+    allRegions.addAll(VertexAiServiceImpl.US_REGIONS);
+    allRegions.addAll(VertexAiServiceImpl.EUROPE_REGIONS);
+    allRegions.addAll(VertexAiServiceImpl.ASIA_REGIONS);
+    allRegions.addAll(VertexAiServiceImpl.MIDDLE_EAST_REGIONS);
+    allRegions.addAll(VertexAiServiceImpl.AFRICA_REGIONS);
+    allRegions.addAll(VertexAiServiceImpl.CANADA_REGIONS);
+    allRegions.addAll(VertexAiServiceImpl.SOUTH_AMERICA_REGIONS);
+    return allRegions;
   }
 
   @Test
