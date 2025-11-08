@@ -215,6 +215,7 @@ d:\java\maven\bin\mvn.cmd checkstyle:check
 *Client Layer:*
 - API client: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
 - Chat Completions: `src/main/java/com/jguru/vertexai/client/ChatCompletionsClient.java`
+- Worldwide Availability: `src/main/java/com/jguru/vertexai/client/WorldwideAvailabilityClient.java`
 
 *DTOs:*
 - `src/main/java/com/jguru/vertexai/service/dto/AuthenticationConfig.java`
@@ -232,6 +233,7 @@ d:\java\maven\bin\mvn.cmd checkstyle:check
 
 *Tests:*
 - Main test class: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
+- Worldwide availability tests: `src/test/java/com/jguru/vertexai/client/WorldwideAvailabilityClientTest.java`
 
 **Model configuration:**
 - Models are aliased in `models.properties` (e.g., `gemini.pro=gemini-2.5-pro`)
@@ -267,6 +269,12 @@ When `--sa-key-file` is explicitly provided, the application MUST:
 - Tests model across all regions in specified cluster
 - Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
 - Example: `vertex.exe -car -c US -m deepseek.r1.0528 --project-id PROJECT --location us-central1 --sa-key-file key.json`
+
+**Worldwide region check feature:**
+- CLI flag: `--worldwide` or `-w`
+- Tests model across all 42 worldwide GCP regions
+- Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
+- Example: `vertex.exe -w -m gemini.pro --project-id PROJECT --location us-central1 --sa-key-file key.json`
 
 ## Security Considerations
 
