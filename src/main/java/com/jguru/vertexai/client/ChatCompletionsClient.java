@@ -46,6 +46,8 @@ public class ChatCompletionsClient {
     this.location = location;
     this.credentials = credentials;
     this.gson = new Gson();
+    logger.debug("ChatCompletionsClient initialized with projectId: {}, location: {}", projectId,
+        location);
   }
 
   /**
@@ -61,6 +63,8 @@ public class ChatCompletionsClient {
    *           If the API call fails
    */
   public String generateContent(String modelName, String prompt) throws IOException {
+    logger.debug("Generating content with model: {}", modelName);
+
     // Build the endpoint URL
     String host = "aiplatform.googleapis.com";
     String endpointLocation = location;
@@ -73,9 +77,12 @@ public class ChatCompletionsClient {
         "https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host,
         projectId, endpointLocation);
 
+    logger.debug("Using endpoint: {}", endpoint);
+
     // Refresh credentials if needed
     AccessToken accessToken = credentials.getAccessToken();
     if (accessToken == null || accessToken.getExpirationTime().before(new Date())) {
+      logger.debug("Refreshing credentials");
       credentials.refresh();
       accessToken = credentials.getAccessToken();
     }
@@ -110,6 +117,8 @@ public class ChatCompletionsClient {
 
       // Read response
       int responseCode = conn.getResponseCode();
+      logger.debug("Received response code: {}", responseCode);
+
       if (responseCode >= 200 && responseCode < 300) {
         return parseSuccessResponse(conn);
       } else {
@@ -133,6 +142,8 @@ public class ChatCompletionsClient {
       }
     }
 
+    logger.debug("Received successful response: {}", response.toString());
+
     // Parse JSON response
     JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
 
@@ -144,12 +155,15 @@ public class ChatCompletionsClient {
         if (firstChoice.has("message")) {
           JsonObject message = firstChoice.getAsJsonObject("message");
           if (message.has("content")) {
-            return message.get("content").getAsString();
+            String content = message.get("content").getAsString();
+            logger.debug("Extracted content from response: {}", content);
+            return content;
           }
         }
       }
     }
 
+    logger.warn("Unexpected response format: {}", response);
     throw new IOException("Unexpected response format: " + response);
   }
 
@@ -166,6 +180,8 @@ public class ChatCompletionsClient {
         error.append(responseLine.trim());
       }
     }
+
+    logger.error("Received error response code {}: {}", responseCode, error.toString());
 
     String errorMessage = String.format("HTTP %d: %s", responseCode, error);
 
@@ -185,6 +201,7 @@ public class ChatCompletionsClient {
       }
     } catch (Exception e) {
       // Keep the original error message if JSON parsing fails
+      logger.debug("Failed to parse error response as JSON", e);
     }
 
     return errorMessage;
