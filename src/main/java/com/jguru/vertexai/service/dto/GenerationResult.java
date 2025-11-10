@@ -30,11 +30,49 @@ public class GenerationResult {
     return errorMessage;
   }
 
+  public String getText() {
+    return content;
+  }
+
   public static GenerationResult success(String content) {
     return new GenerationResult(content, true, null);
   }
 
   public static GenerationResult failure(String errorMessage) {
     return new GenerationResult(null, false, errorMessage);
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public static class Builder {
+    private String content;
+    private boolean success = true;
+    private String errorMessage;
+
+    public Builder withContent(String content) {
+      this.content = content;
+      return this;
+    }
+
+    public Builder withText(String text) {
+      this.content = text;
+      return this;
+    }
+
+    public Builder withSuccess(boolean success) {
+      this.success = success;
+      return this;
+    }
+
+    public Builder withErrorMessage(String errorMessage) {
+      this.errorMessage = errorMessage;
+      return this;
+    }
+
+    public GenerationResult build() {
+      return new GenerationResult(content, success, errorMessage);
+    }
   }
 }

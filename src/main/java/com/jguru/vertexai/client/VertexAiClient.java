@@ -5,6 +5,7 @@ import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.jguru.vertexai.service.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.AuthenticationType;
+import com.jguru.vertexai.service.dto.GenerationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,7 +101,10 @@ public class VertexAiClient {
       if (keyStr.endsWith(".provider")) {
         String modelAlias = keyStr.substring(0, keyStr.length() - 9);
         String fullModelName = modelProperties.getProperty(modelAlias);
-        if (fullModelName != null && fullModelName.equals(modelName)) {
+
+        // Check if the input modelName matches either the full model name or the model alias
+        if (fullModelName != null
+            && (fullModelName.equals(modelName) || modelAlias.equals(modelName))) {
           return modelProperties.getProperty(keyStr);
         }
       }
@@ -128,77 +132,150 @@ public class VertexAiClient {
         return response.text();
       }
     } else {
-      // Check if this model should use Chat Completions API
-      // First check for explicit OpenAI flag
-      String openAiFlag = modelProperties.getProperty(modelName + ".openai");
-      boolean useChatCompletions = "true".equalsIgnoreCase(openAiFlag);
-
-      // If not explicitly set, check for MaaS models (backward compatibility)
-      String providerPrefix = null;
-      if (!useChatCompletions) {
-        providerPrefix = getProviderPrefix(modelName);
-        useChatCompletions = providerPrefix != null;
+      // Check for MaaS models (including google-openai provider) - prioritize .provider property
+      String providerPrefix = getProviderPrefix(modelName);
+      boolean useChatCompletions = providerPrefix != null;
+      if (providerPrefix != null) {
+        logger.debug("Detected provider '{}' for model '{}'", providerPrefix, modelName);
       }
 
-      // Load credentials if explicit key path provided
-      GoogleCredentials credentials = null;
-      if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY) {
-        try {
-          credentials = GoogleCredentials.fromStream(new FileInputStream(authConfig.getSaKeyFile()))
-              .createScoped("https://www.googleapis.com/auth/cloud-platform");
-        } catch (IOException e) {
-          throw new IOException("Failed to load service account key from: "
-              + authConfig.getSaKeyFile()
-              + ". The file must be a valid JSON service account key. ADC fallback is disabled when --sa-key-file is specified.",
-              e);
-        }
+      // Also check for explicit OpenAI flag as fallback
+      if (!useChatCompletions) {
+        String openAiFlag = modelProperties.getProperty(modelName + ".openai");
+        useChatCompletions = "true".equalsIgnoreCase(openAiFlag);
       }
 
       if (useChatCompletions) {
         // Use Chat Completions API for MaaS models
-        logger.info("Using Chat Completions API for model: {}", modelName);
+        // Get the full model name from the alias for API calls
+        String fullModelName = modelProperties.getProperty(modelName, modelName);
 
-        if (credentials == null) {
-          // Use ADC for Chat Completions
-          credentials = GoogleCredentials.getApplicationDefault()
-              .createScoped("https://www.googleapis.com/auth/cloud-platform");
-        }
-
-        ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(),
-            authConfig.getLocation(), credentials);
-
-        // For models with OpenAI flag, use the model name directly
-        // For MaaS models, prepend the provider prefix
-        String modelWithPrefix = modelName;
-        if (providerPrefix != null) {
-          modelWithPrefix = providerPrefix + "/" + modelName;
-          logger.info("Model name with provider: {}", modelWithPrefix);
-        }
-        return chatClient.generateContent(modelWithPrefix, text);
+        // If we have a providerPrefix from .provider property, use that
+        // Otherwise, fall back to "openai" for models with .openai=true
+        String provider = providerPrefix != null ? providerPrefix : "openai";
+        GenerationResult result = callChatCompletionsApi(provider, fullModelName, text);
+        return result.getText();
       } else {
         // Use standard Vertex AI API for Gemini and Llama models
-        System.setProperty("GOOGLE_GENAI_USE_VERTEXAI", "true");
-        System.setProperty("GOOGLE_CLOUD_PROJECT", authConfig.getProjectId());
-        System.setProperty("GOOGLE_CLOUD_LOCATION", authConfig.getLocation());
-
-        if (credentials != null) {
-          // Build client with explicit credentials
-          try (Client client = Client.builder().project(authConfig.getProjectId())
-              .location(authConfig.getLocation()).credentials(credentials).vertexAI(true).build()) {
-            GenerateContentResponse response = client.models.generateContent(modelName, text, null);
-            return response.text();
-          }
-        } else {
-          // Use ADC
-          System.setProperty("GOOGLE_APPLICATION_CREDENTIALS", "");
-
-          try (Client client = Client.builder().project(authConfig.getProjectId())
-              .location(authConfig.getLocation()).vertexAI(true).build()) {
-            GenerateContentResponse response = client.models.generateContent(modelName, text, null);
-            return response.text();
-          }
-        }
+        // Get the full model name from the alias for API calls
+        String fullModelName = modelProperties.getProperty(modelName, modelName);
+        logger.debug("Routing model '{}' to standard Vertex AI API as '{}'", modelName,
+            fullModelName);
+        GenerationResult result = callStandardVertexAi(fullModelName, text);
+        return result.getText();
       }
     }
+  }
+
+  /**
+   * Calls the standard Vertex AI API for Gemini and Llama models.
+   *
+   * @param modelName
+   *          The model to use
+   * @param textPrompt
+   *          The prompt text
+   * @return GenerationResult containing the response
+   * @throws IOException
+   *           If the API call fails
+   */
+  protected GenerationResult callStandardVertexAi(String modelName, String textPrompt)
+      throws IOException {
+    // Load credentials if explicit key path provided
+    GoogleCredentials credentials = null;
+    if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY) {
+      try {
+        credentials = GoogleCredentials.fromStream(new FileInputStream(authConfig.getSaKeyFile()))
+            .createScoped("https://www.googleapis.com/auth/cloud-platform");
+      } catch (IOException e) {
+        throw new IOException("Failed to load service account key from: "
+            + authConfig.getSaKeyFile()
+            + ". The file must be a valid JSON service account key. ADC fallback is disabled when --sa-key-file is specified.",
+            e);
+      }
+    }
+
+    // Use standard Vertex AI API for Gemini and Llama models
+    System.setProperty("GOOGLE_GENAI_USE_VERTEXAI", "true");
+    System.setProperty("GOOGLE_CLOUD_PROJECT", authConfig.getProjectId());
+    System.setProperty("GOOGLE_CLOUD_LOCATION", authConfig.getLocation());
+
+    if (credentials != null) {
+      // Build client with explicit credentials
+      try (Client client = Client.builder().project(authConfig.getProjectId())
+          .location(authConfig.getLocation()).credentials(credentials).vertexAI(true).build()) {
+        logger.debug(
+            "Invoking Vertex AI model '{}' with explicit credentials in project '{}' / location '{}'",
+            modelName, authConfig.getProjectId(), authConfig.getLocation());
+        GenerateContentResponse response = client.models.generateContent(modelName, textPrompt,
+            null);
+        return GenerationResult.builder().withText(response.text()).build();
+      }
+    } else {
+      // Use ADC
+      System.setProperty("GOOGLE_APPLICATION_CREDENTIALS", "");
+
+      try (Client client = Client.builder().project(authConfig.getProjectId())
+          .location(authConfig.getLocation()).vertexAI(true).build()) {
+        logger.debug("Invoking Vertex AI model '{}' in project '{}' / location '{}'", modelName,
+            authConfig.getProjectId(), authConfig.getLocation());
+        GenerateContentResponse response = client.models.generateContent(modelName, textPrompt,
+            null);
+        return GenerationResult.builder().withText(response.text()).build();
+      }
+    }
+  }
+
+  /**
+   * Calls the Chat Completions API for MaaS and OpenAI models.
+   *
+   * @param provider
+   *          The provider name (e.g., "deepseek-ai", "openai")
+   * @param modelName
+   *          The model to use
+   * @param textPrompt
+   *          The prompt text
+   * @return GenerationResult containing the response
+   * @throws IOException
+   *           If the API call fails
+   */
+  protected GenerationResult callChatCompletionsApi(String provider, String modelName,
+      String textPrompt) throws IOException {
+    // Load credentials if explicit key path provided
+    GoogleCredentials credentials = null;
+    if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY) {
+      try {
+        credentials = GoogleCredentials.fromStream(new FileInputStream(authConfig.getSaKeyFile()))
+            .createScoped("https://www.googleapis.com/auth/cloud-platform");
+      } catch (IOException e) {
+        throw new IOException("Failed to load service account key from: "
+            + authConfig.getSaKeyFile()
+            + ". The file must be a valid JSON service account key. ADC fallback is disabled when --sa-key-file is specified.",
+            e);
+      }
+    }
+
+    // Use Chat Completions API for MaaS models
+    logger.info("Using Chat Completions API for model: {} with provider: {}", modelName, provider);
+
+    if (credentials == null) {
+      // Use ADC for Chat Completions
+      credentials = GoogleCredentials.getApplicationDefault()
+          .createScoped("https://www.googleapis.com/auth/cloud-platform");
+    }
+
+    ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(),
+        authConfig.getLocation(), credentials);
+
+    // For models with OpenAI flag, use the model name directly
+    // For MaaS models, prepend the provider prefix
+    // For google-openai models, use the model name as-is (it already contains "google/" prefix)
+    String modelWithPrefix = modelName;
+    if (!"openai".equalsIgnoreCase(provider) && !"google-openai".equalsIgnoreCase(provider)) {
+      modelWithPrefix = provider + "/" + modelName;
+      logger.info("Model name with provider: {}", modelWithPrefix);
+    }
+
+    String response = chatClient.generateContent(modelWithPrefix, textPrompt);
+    return GenerationResult.builder().withText(response).build();
   }
 }

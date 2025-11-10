@@ -140,8 +140,6 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String testPrompt = (textOption != null && !textOption.isEmpty())
         ? textOption
         : (text != null ? text : "200+200*99=?");
-    String saKeyFile = auth.saAuth.saKeyFile != null ? auth.saAuth.saKeyFile : null;
-
     System.out.println("\n=== Region Availability Check ===");
     System.out.println("Model: " + modelName);
     System.out.println("Cluster: " + cluster);
@@ -150,10 +148,11 @@ public class VertexAiMasterMain implements Callable<Integer> {
     System.out.println("\nTesting...");
 
     // Create authentication config
-    AuthenticationConfig authConfig = AuthenticationConfig.builder()
-        .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
-        .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
-        .withSaKeyFile(saKeyFile).build();
+    AuthenticationConfig authConfig = resolveServiceAccountAuthentication();
+    if (authConfig == null) {
+      throw new IllegalStateException(
+          "Service account configuration is required for region availability checks.");
+    }
 
     // Create region check request
     RegionCheckRequest request = RegionCheckRequest.builder().withAuthenticationConfig(authConfig)
@@ -193,24 +192,54 @@ public class VertexAiMasterMain implements Callable<Integer> {
 
   }
 
-  private AuthenticationConfig createAuthenticationConfig() {
-    if (auth.apiKeyAuth != null) {
-      return AuthenticationConfig.builder().withType(AuthenticationType.API_KEY)
-          .withApiKey(auth.apiKeyAuth.apiKey).build();
-    } else if (auth.saAuth != null) {
-      if (auth.saAuth.saKeyFile != null && !auth.saAuth.saKeyFile.isEmpty()) {
-        // Use explicit Service Account JSON key file
-        return AuthenticationConfig.builder()
-            .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
-            .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
-            .withSaKeyFile(auth.saAuth.saKeyFile).build();
-      } else {
-        // Fallback to ADC
-        return AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
-            .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location).build();
-      }
+  private AuthenticationConfig resolveServiceAccountAuthentication() {
+    if (auth.saAuth == null) {
+      logger.error("Service account credentials are required for this operation.");
+      return null;
+    }
+
+    boolean hasKeyFile = auth.saAuth.saKeyFile != null && !auth.saAuth.saKeyFile.isBlank();
+    AuthenticationConfig.Builder builder = AuthenticationConfig.builder()
+        .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location);
+
+    if (hasKeyFile) {
+      builder.withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+          .withSaKeyFile(auth.saAuth.saKeyFile);
     } else {
-      logger.error("Please provide either API key or Service Account credentials.");
+      builder.withType(AuthenticationType.SERVICE_ACCOUNT_ADC);
+    }
+
+    try {
+      return builder.build();
+    } catch (IllegalArgumentException | IllegalStateException e) {
+      logger.error("Invalid service account configuration: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private AuthenticationConfig createAuthenticationConfig() {
+    try {
+      if (auth.apiKeyAuth != null) {
+        return AuthenticationConfig.builder().withType(AuthenticationType.API_KEY)
+            .withApiKey(auth.apiKeyAuth.apiKey).build();
+      } else if (auth.saAuth != null) {
+        if (auth.saAuth.saKeyFile != null && !auth.saAuth.saKeyFile.isEmpty()) {
+          // Use explicit Service Account JSON key file
+          return AuthenticationConfig.builder()
+              .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+              .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
+              .withSaKeyFile(auth.saAuth.saKeyFile).build();
+        } else {
+          // Fallback to ADC
+          return AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+              .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location).build();
+        }
+      } else {
+        logger.error("Please provide either API key or Service Account credentials.");
+        return null;
+      }
+    } catch (IllegalArgumentException | IllegalStateException e) {
+      logger.error("Invalid authentication configuration: {}", e.getMessage());
       return null;
     }
   }
@@ -224,18 +253,17 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String testPrompt = (textOption != null && !textOption.isEmpty())
         ? textOption
         : (text != null ? text : "200+200*99=?");
-    String saKeyFile = auth.saAuth.saKeyFile != null ? auth.saAuth.saKeyFile : null;
-
     System.out.println("\n=== Worldwide Region Availability Check ===");
     System.out.println("Model: " + modelName);
     System.out.println("Test prompt: " + testPrompt);
     System.out.println("\nTesting...");
 
     // Create authentication config
-    AuthenticationConfig authConfig = AuthenticationConfig.builder()
-        .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
-        .withProjectId(auth.saAuth.projectId).withLocation(auth.saAuth.location)
-        .withSaKeyFile(saKeyFile).build();
+    AuthenticationConfig authConfig = resolveServiceAccountAuthentication();
+    if (authConfig == null) {
+      throw new IllegalStateException(
+          "Service account configuration is required for worldwide availability checks.");
+    }
 
     // Create region check request
     RegionCheckRequest request = RegionCheckRequest.builder().withAuthenticationConfig(authConfig)

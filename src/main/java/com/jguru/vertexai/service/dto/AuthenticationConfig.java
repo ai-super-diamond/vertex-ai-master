@@ -72,7 +72,34 @@ public class AuthenticationConfig {
     }
 
     public AuthenticationConfig build() {
+      if (type == null) {
+        throw new IllegalStateException("Authentication type must be provided");
+      }
+
+      switch (type) {
+        case API_KEY :
+          requireNonBlank(apiKey, "apiKey");
+          break;
+        case SERVICE_ACCOUNT_ADC :
+          requireNonBlank(projectId, "projectId");
+          requireNonBlank(location, "location");
+          break;
+        case SERVICE_ACCOUNT_EXPLICIT_KEY :
+          requireNonBlank(saKeyFile, "saKeyFile");
+          requireNonBlank(projectId, "projectId");
+          requireNonBlank(location, "location");
+          break;
+        default :
+          throw new IllegalStateException("Unsupported authentication type: " + type);
+      }
+
       return new AuthenticationConfig(type, apiKey, projectId, location, saKeyFile);
+    }
+
+    private static void requireNonBlank(String value, String fieldName) {
+      if (value == null || value.isBlank()) {
+        throw new IllegalArgumentException(fieldName + " must be provided");
+      }
     }
   }
 

@@ -50,4 +50,11 @@ public interface VertexAiService {
    * @return list of regions for the cluster, or null if invalid cluster
    */
   List<String> getRegionsForCluster(String clusterName);
+
+  /**
+   * Gets all regions across every cluster.
+   *
+   * @return list of all regions
+   */
+  List<String> getAllRegions();
 }

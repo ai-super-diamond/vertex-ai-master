@@ -1,14 +1,12 @@
 package com.jguru.vertexai.utils;
 
 import com.jguru.vertexai.client.VertexAiClient;
+import com.jguru.vertexai.service.RegionCatalog;
+import com.jguru.vertexai.service.RegionCatalog.Cluster;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,34 +17,22 @@ import java.util.Properties;
  */
 public class VertexUtils {
 
-  // US Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> US_REGIONS = Arrays.asList("us-central1", "us-east1", "us-east4",
-      "us-east5", "us-south1", "us-west1", "us-west2", "us-west3", "us-west4");
+  private static final Logger logger = LoggerFactory.getLogger(VertexUtils.class);
 
-  // Europe Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> EUROPE_REGIONS = Arrays.asList("europe-central2",
-      "europe-north1", "europe-southwest1", "europe-west1", "europe-west2", "europe-west3",
-      "europe-west4", "europe-west6", "europe-west8", "europe-west9", "europe-west12");
-
-  // Asia Pacific Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> ASIA_REGIONS = Arrays.asList("asia-east1", "asia-east2",
-      "asia-northeast1", "asia-northeast2", "asia-northeast3", "asia-south1", "asia-south2",
-      "asia-southeast1", "asia-southeast2", "australia-southeast1", "australia-southeast2");
-
-  // Middle East Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> MIDDLE_EAST_REGIONS = Arrays.asList("me-central1", "me-central2",
-      "me-west1");
-
-  // Africa Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> AFRICA_REGIONS = Arrays.asList("africa-south1");
-
-  // North America (Canada) Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> CANADA_REGIONS = Arrays.asList("northamerica-northeast1",
-      "northamerica-northeast2");
-
-  // South America Regions (source: https://cloud.google.com/about/locations - Nov 2025)
-  public static final List<String> SOUTH_AMERICA_REGIONS = Arrays.asList("southamerica-east1",
-      "southamerica-west1");
+  // Region lists exposed for legacy callers while sourcing data from the shared catalogue.
+  public static final List<String> US_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.US));
+  public static final List<String> EUROPE_REGIONS = List
+      .copyOf(RegionCatalog.getRegions(Cluster.EUROPE));
+  public static final List<String> ASIA_REGIONS = List
+      .copyOf(RegionCatalog.getRegions(Cluster.ASIA));
+  public static final List<String> MIDDLE_EAST_REGIONS = List
+      .copyOf(RegionCatalog.getRegions(Cluster.MIDDLE_EAST));
+  public static final List<String> AFRICA_REGIONS = List
+      .copyOf(RegionCatalog.getRegions(Cluster.AFRICA));
+  public static final List<String> CANADA_REGIONS = List
+      .copyOf(RegionCatalog.getRegions(Cluster.CANADA));
+  public static final List<String> SOUTH_AMERICA_REGIONS = List
+      .copyOf(RegionCatalog.getRegions(Cluster.SOUTH_AMERICA));
 
   private static Properties modelProperties = null;
 
@@ -55,33 +41,7 @@ public class VertexUtils {
    */
   private static Properties getModelProperties() {
     if (modelProperties == null) {
-      modelProperties = new Properties();
-
-      // Try external file first (from -Dmodels.config system property)
-      String externalConfig = System.getProperty("models.config");
-      if (externalConfig != null) {
-        Path configPath = Paths.get(externalConfig);
-        if (Files.exists(configPath)) {
-          try (InputStream is = new FileInputStream(configPath.toFile())) {
-            modelProperties.load(is);
-            System.err.println("[INFO] Loaded models from: " + configPath);
-            return modelProperties;
-          } catch (IOException e) {
-            System.err
-                .println("[WARN] Failed to load external models.properties: " + e.getMessage());
-          }
-        }
-      }
-
-      // Fall back to embedded resource
-      try (InputStream is = VertexUtils.class.getResourceAsStream("/models.properties")) {
-        if (is != null) {
-          modelProperties.load(is);
-          System.err.println("[INFO] Loaded embedded models.properties");
-        }
-      } catch (IOException e) {
-        System.err.println("[WARN] Failed to load embedded models.properties: " + e.getMessage());
-      }
+      modelProperties = PropertiesLoader.load(logger, "models.config", "models.properties");
     }
     return modelProperties;
   }
@@ -97,7 +57,7 @@ public class VertexUtils {
     Properties props = getModelProperties();
     String resolved = props.getProperty(modelName);
     if (resolved != null) {
-      System.err.println("[INFO] Resolved model alias '" + modelName + "' -> '" + resolved + "'");
+      logger.info("Resolved model alias '{}' -> '{}'", modelName, resolved);
       return resolved;
     }
     return modelName;

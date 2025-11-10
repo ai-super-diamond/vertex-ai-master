@@ -136,6 +136,7 @@ The application provides comprehensive region availability testing capabilities:
 2. **Worldwide Testing**: Test models across all 42 GCP regions globally
 3. **Result Aggregation**: Collect and summarize results from multiple region tests
 4. **Detailed Reporting**: Provide per-region success/failure status with error details
+5. **Region Catalogue**: `RegionCatalog` maintains the canonical mapping of clusters to regions so that clients, services, and utilities share a single source of truth.
 
 ## Design Principles
 

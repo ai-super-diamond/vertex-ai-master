@@ -3,15 +3,12 @@ package com.jguru.vertexai.client;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
 import com.jguru.vertexai.service.VertexAiService;
-import com.jguru.vertexai.service.VertexAiServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 /**
  * Client for checking model availability across worldwide regions.
@@ -36,13 +33,8 @@ public class WorldwideAvailabilityClient {
    *           if there's an error during the check
    */
   public RegionCheckResult checkWorldwideAvailability(RegionCheckRequest request) throws Exception {
-    // Build combined region list from service constants
-    List<String> allRegions = Stream
-        .of(VertexAiServiceImpl.US_REGIONS, VertexAiServiceImpl.EUROPE_REGIONS,
-            VertexAiServiceImpl.ASIA_REGIONS, VertexAiServiceImpl.MIDDLE_EAST_REGIONS,
-            VertexAiServiceImpl.AFRICA_REGIONS, VertexAiServiceImpl.CANADA_REGIONS,
-            VertexAiServiceImpl.SOUTH_AMERICA_REGIONS)
-        .flatMap(List::stream).collect(Collectors.toList());
+    // Build combined region list from the service to avoid duplicate region definitions
+    List<String> allRegions = List.copyOf(vertexAiService.getAllRegions());
 
     logger.info("Testing model '{}' across worldwide regions...", request.getModelName());
     logger.info("Total regions to test: {}", allRegions.size());

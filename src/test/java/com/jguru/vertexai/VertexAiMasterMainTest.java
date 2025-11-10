@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 import com.jguru.vertexai.service.VertexAiServiceImpl;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -132,7 +131,7 @@ class VertexAiMasterMainTest {
 
     // Print output for debugging (after stream is restored)
     logger.error("=== Error Output (Expired Key Test) ===\n{}", errorOutput);
-    if (output.length() > 0) {
+    if (!output.isEmpty()) {
       logger.info("=== Output (Expired Key Test) ===\n{}", output);
     }
 
@@ -190,7 +189,7 @@ class VertexAiMasterMainTest {
     regionCityMap.put("northamerica-northeast2", "Toronto");
     regionCityMap.put("southamerica-east1", "Sao Paulo");
     regionCityMap.put("southamerica-west1", "Santiago");
-    return regionCityMap.getOrDefault(region, "Unknown");
+    return regionCityMap.getOrDefault(region, "N/A");
   }
 
   @Test
@@ -215,7 +214,7 @@ class VertexAiMasterMainTest {
     // Extract all model aliases dynamically from properties (exclude .region and .provider)
     List<String> modelAliases = modelProps.keySet().stream().map(Object::toString).filter(
         key -> !key.endsWith(".region") && !key.endsWith(".provider") && !key.endsWith(".openai"))
-        .sorted().collect(Collectors.toList());
+        .sorted().toList();
 
     String testPrompt = "200+200*99=?";
 

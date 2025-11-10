@@ -34,6 +34,16 @@ Before you begin, ensure you have the following installed and configured:
     *   Set the `GRAALVM_HOME` environment variable to your GraalVM installation directory.
     *   Ensure the GraalVM `bin` directory is in your system's `PATH`.
 
+## Quality Checklist
+
+Run the following steps before sending code for review or publishing a release:
+
+1. `mvn spotless:apply` – auto-format Java sources and tidy the `pom.xml`.
+2. `mvn verify` – compile the project and execute the full JUnit suite.
+3. `mvn -Pspotbugs verify` – optional static analysis run. Requires a SpotBugs-compatible JDK (21 or 22); with newer preview JDKs SpotBugs may fail to parse standard library classes.
+
+The CLI also emits DEBUG-level diagnostics for model routing and credential usage when `logger` configuration enables the debug level, which helps triage misconfiguration quickly.
+
 ## Model Context Protocol (MCP)
 
 ### Local MCP configuration

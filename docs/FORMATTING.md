@@ -40,6 +40,19 @@ mvn checkstyle:checkstyle
 - Runs on verify phase
 - Currently set to warn (failsOnError=false) but violations are logged
 
+### 3. **SpotBugs (Static Analysis)**
+Detects potential defects such as null-pointer dereferences and threading issues.
+
+**Commands:**
+```bash
+# Run static analysis (requires a SpotBugs-compatible JDK, e.g., 21 or 22)
+mvn -Pspotbugs verify
+```
+
+**Notes:**
+- SpotBugs runs in an optional Maven profile so day-to-day builds remain fast.
+- When using JDK preview builds (e.g., Java 23+), SpotBugs currently fails to parse some JDK classes; switch to a supported LTS JDK before running the profile.
+
 ### 3. **EditorConfig**
 Ensures consistent editor settings across different IDEs.
 
@@ -59,6 +72,9 @@ mvn spotless:apply
 
 # Verify everything compiles and tests pass
 mvn clean test
+
+# Optional: run static analysis (requires supported JDK)
+mvn -Pspotbugs verify
 ```
 
 ### CI/CD Integration
