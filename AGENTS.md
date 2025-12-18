@@ -5,7 +5,7 @@ Instructions for AI coding agents working on this Java CLI project for Google Ve
 ## Project Overview
 
 **Tech Stack:**
-- Java 21 (use `--release 21` flag, not `-source/-target`)
+- Java 25 with GraalVM (use `--release 25` flag, not `-source/-target`)
 - Maven 3.x build tool (located at `d:\java\maven\bin\mvn.cmd`)
 - Picocli 4.7.7 for CLI framework
 - Google GenAI SDK 1.26.0 for Vertex AI integration
@@ -187,11 +187,12 @@ d:\java\maven\bin\mvn.cmd checkstyle:check
 
 **Style rules:**
 - 2-space indentation (enforced by Eclipse formatter)
-- 100-character line limit
+- 140-character line limit
 - Remove unused imports
 - Trim trailing whitespace
 - End files with newline
 - Google Java Style checks (warnings only)
+- **String concatenation**: Prefer `String.format()` for readability over `+` operator or `StringBuilder`. Note: String Templates were withdrawn from Java 23+
 
 **Before committing (STRICTLY ENFORCED):**
 1. **ALWAYS run `mvn clean test` FIRST** - 100% tests must pass

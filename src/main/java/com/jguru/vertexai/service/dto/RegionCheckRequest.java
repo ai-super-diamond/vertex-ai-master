@@ -11,14 +11,16 @@ public class RegionCheckRequest {
   private final String cluster;
   private final String testPrompt;
   private final List<String> regions;
+  private final boolean debug;
 
-  public RegionCheckRequest(AuthenticationConfig authenticationConfig, String modelName,
-      String cluster, String testPrompt, List<String> regions) {
+  public RegionCheckRequest(AuthenticationConfig authenticationConfig, String modelName, String cluster, String testPrompt,
+      List<String> regions, boolean debug) {
     this.authenticationConfig = authenticationConfig;
     this.modelName = modelName;
     this.cluster = cluster;
     this.testPrompt = testPrompt;
     this.regions = regions;
+    this.debug = debug;
   }
 
   public AuthenticationConfig getAuthenticationConfig() {
@@ -41,12 +43,17 @@ public class RegionCheckRequest {
     return regions;
   }
 
+  public boolean isDebug() {
+    return debug;
+  }
+
   public static class Builder {
     private AuthenticationConfig authenticationConfig;
     private String modelName;
     private String cluster;
     private String testPrompt;
     private List<String> regions;
+    private boolean debug;
 
     public Builder withAuthenticationConfig(AuthenticationConfig authenticationConfig) {
       this.authenticationConfig = authenticationConfig;
@@ -73,8 +80,13 @@ public class RegionCheckRequest {
       return this;
     }
 
+    public Builder withDebug(boolean debug) {
+      this.debug = debug;
+      return this;
+    }
+
     public RegionCheckRequest build() {
-      return new RegionCheckRequest(authenticationConfig, modelName, cluster, testPrompt, regions);
+      return new RegionCheckRequest(authenticationConfig, modelName, cluster, testPrompt, regions, debug);
     }
   }
 

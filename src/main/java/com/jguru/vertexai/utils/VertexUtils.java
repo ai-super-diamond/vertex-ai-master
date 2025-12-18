@@ -3,6 +3,8 @@ package com.jguru.vertexai.utils;
 import com.jguru.vertexai.client.VertexAiClient;
 import com.jguru.vertexai.service.RegionCatalog;
 import com.jguru.vertexai.service.RegionCatalog.Cluster;
+import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.service.dto.AuthenticationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,18 +23,12 @@ public class VertexUtils {
 
   // Region lists exposed for legacy callers while sourcing data from the shared catalogue.
   public static final List<String> US_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.US));
-  public static final List<String> EUROPE_REGIONS = List
-      .copyOf(RegionCatalog.getRegions(Cluster.EUROPE));
-  public static final List<String> ASIA_REGIONS = List
-      .copyOf(RegionCatalog.getRegions(Cluster.ASIA));
-  public static final List<String> MIDDLE_EAST_REGIONS = List
-      .copyOf(RegionCatalog.getRegions(Cluster.MIDDLE_EAST));
-  public static final List<String> AFRICA_REGIONS = List
-      .copyOf(RegionCatalog.getRegions(Cluster.AFRICA));
-  public static final List<String> CANADA_REGIONS = List
-      .copyOf(RegionCatalog.getRegions(Cluster.CANADA));
-  public static final List<String> SOUTH_AMERICA_REGIONS = List
-      .copyOf(RegionCatalog.getRegions(Cluster.SOUTH_AMERICA));
+  public static final List<String> EUROPE_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.EUROPE));
+  public static final List<String> ASIA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.ASIA));
+  public static final List<String> MIDDLE_EAST_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.MIDDLE_EAST));
+  public static final List<String> AFRICA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.AFRICA));
+  public static final List<String> CANADA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.CANADA));
+  public static final List<String> SOUTH_AMERICA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.SOUTH_AMERICA));
 
   private static Properties modelProperties = null;
 
@@ -76,10 +72,10 @@ public class VertexUtils {
    * @throws IOException
    *           If the API call fails
    */
-  public static String generateContent(String apiKey, String modelName, String text)
-      throws IOException {
+  public static String generateContent(String apiKey, String modelName, String text) throws IOException {
     String resolvedModel = resolveModelName(modelName);
-    VertexAiClient client = new VertexAiClient(apiKey);
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey(apiKey).build();
+    VertexAiClient client = new VertexAiClient(authConfig);
     return client.callVertexAi(resolvedModel, text);
   }
 
@@ -98,10 +94,11 @@ public class VertexUtils {
    * @throws IOException
    *           If the API call fails
    */
-  public static String generateContent(String projectId, String location, String modelName,
-      String text) throws IOException {
+  public static String generateContent(String projectId, String location, String modelName, String text) throws IOException {
     String resolvedModel = resolveModelName(modelName);
-    VertexAiClient client = new VertexAiClient(projectId, location);
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId(projectId).withLocation(location).build();
+    VertexAiClient client = new VertexAiClient(authConfig);
     return client.callVertexAi(resolvedModel, text);
   }
 
@@ -122,10 +119,12 @@ public class VertexUtils {
    * @throws IOException
    *           If the API call fails
    */
-  public static String generateContent(String saKeyPath, String projectId, String location,
-      String modelName, String text) throws IOException {
+  public static String generateContent(String saKeyPath, String projectId, String location, String modelName, String text)
+      throws IOException {
     String resolvedModel = resolveModelName(modelName);
-    VertexAiClient client = new VertexAiClient(saKeyPath, projectId, location);
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withSaKeyFile(saKeyPath).withProjectId(projectId).withLocation(location).build();
+    VertexAiClient client = new VertexAiClient(authConfig);
     return client.callVertexAi(resolvedModel, text);
   }
 
@@ -144,15 +143,17 @@ public class VertexUtils {
    *          Simple test prompt (default: "Hello")
    * @return Map of region -> result ("SUCCESS" or error message)
    */
-  public static Map<String, String> checkConnectivityAvailability(String saKeyPath,
-      String projectId, String modelName, List<String> regions, String testPrompt) {
+  public static Map<String, String> checkConnectivityAvailability(String saKeyPath, String projectId, String modelName,
+      List<String> regions, String testPrompt) {
     Map<String, String> results = new HashMap<>();
     String prompt = (testPrompt != null && !testPrompt.isEmpty()) ? testPrompt : "Hello";
     String resolvedModel = resolveModelName(modelName);
 
     for (String region : regions) {
       try {
-        VertexAiClient client = new VertexAiClient(saKeyPath, projectId, region);
+        AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+            .withSaKeyFile(saKeyPath).withProjectId(projectId).withLocation(region).build();
+        VertexAiClient client = new VertexAiClient(authConfig);
         String response = client.callVertexAi(resolvedModel, prompt);
         if (response != null && !response.isEmpty()) {
           results.put(region, "SUCCESS");
@@ -172,9 +173,7 @@ public class VertexUtils {
           results.put(region, "500 Internal Error");
         } else {
           // Truncate long error messages
-          String shortError = errorMsg.length() > 100
-              ? errorMsg.substring(0, 100) + "..."
-              : errorMsg;
+          String shortError = errorMsg.length() > 100 ? errorMsg.substring(0, 100) + "..." : errorMsg;
           results.put(region, "ERROR: " + shortError);
         }
       } catch (Exception e) {
@@ -198,8 +197,8 @@ public class VertexUtils {
    *          List of regions to test
    * @return Map of region -> result ("SUCCESS" or error message)
    */
-  public static Map<String, String> checkConnectivityAvailability(String saKeyPath,
-      String projectId, String modelName, List<String> regions) {
+  public static Map<String, String> checkConnectivityAvailability(String saKeyPath, String projectId, String modelName,
+      List<String> regions) {
     return checkConnectivityAvailability(saKeyPath, projectId, modelName, regions, "Hello");
   }
 }

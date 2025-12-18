@@ -8,8 +8,7 @@ public class GenerationRequest {
   private final String modelName;
   private final String text;
 
-  public GenerationRequest(AuthenticationConfig authenticationConfig, String modelName,
-      String text) {
+  public GenerationRequest(AuthenticationConfig authenticationConfig, String modelName, String text) {
     this.authenticationConfig = authenticationConfig;
     this.modelName = modelName;
     this.text = text;

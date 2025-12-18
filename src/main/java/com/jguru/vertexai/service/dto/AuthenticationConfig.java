@@ -10,8 +10,7 @@ public class AuthenticationConfig {
   private final String location;
   private final String saKeyFile;
 
-  public AuthenticationConfig(AuthenticationType type, String apiKey, String projectId,
-      String location, String saKeyFile) {
+  public AuthenticationConfig(AuthenticationType type, String apiKey, String projectId, String location, String saKeyFile) {
     this.type = type;
     this.apiKey = apiKey;
     this.projectId = projectId;

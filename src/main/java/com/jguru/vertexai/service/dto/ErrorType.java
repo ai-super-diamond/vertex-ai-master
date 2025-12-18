@@ -1,8 +1,8 @@
 package com.jguru.vertexai.service.dto;
 
 public enum ErrorType {
-  NOT_FOUND_404("404 Not Found"), PERMISSION_DENIED_403("403 Permission Denied"), BAD_REQUEST_400(
-      "400 Bad Request"), INTERNAL_ERROR_500("500 Internal Error"), UNKNOWN_ERROR("UNKNOWN_ERROR");
+  NOT_FOUND_404("404 Not Found"), PERMISSION_DENIED_403("403 Permission Denied"), BAD_REQUEST_400("400 Bad Request"), INTERNAL_ERROR_500(
+      "500 Internal Error"), UNKNOWN_ERROR("UNKNOWN_ERROR");
 
   private final String displayMessage;
 

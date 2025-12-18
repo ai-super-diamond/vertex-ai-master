@@ -71,8 +71,7 @@ public class RegionProviderImpl implements RegionProvider {
     List<String> allRegions = new ArrayList<>();
 
     // Try to get all regions from properties
-    String[] clusterKeys = {"US", "EUROPE", "ASIA", "MIDDLE_EAST", "AFRICA", "CANADA",
-        "SOUTH_AMERICA"};
+    String[] clusterKeys = {"US", "EUROPE", "ASIA", "MIDDLE_EAST", "AFRICA", "CANADA", "SOUTH_AMERICA"};
 
     for (String clusterKey : clusterKeys) {
       String propertyKey = clusterKey + "_REGIONS";

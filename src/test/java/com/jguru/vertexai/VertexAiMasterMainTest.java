@@ -28,20 +28,43 @@ class VertexAiMasterMainTest {
 
   private static final Logger logger = LoggerFactory.getLogger(VertexAiMasterMainTest.class);
 
+  // Test configuration properties
+  private static final Properties testProps = new Properties();
+  private static final String TEST_PROJECT_ID;
+  private static final String TEST_LOCATION;
+  private static final String TEST_SA_KEY_FILE;
+  private static final String TEST_MODEL_NAME;
+  private static final String TEST_PROMPT;
+
+  static {
+    try (InputStream input = VertexAiMasterMainTest.class.getClassLoader().getResourceAsStream("test.properties")) {
+      if (input != null) {
+        testProps.load(input);
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to load test.properties", e);
+    }
+
+    TEST_PROJECT_ID = testProps.getProperty("test.project.id");
+    TEST_LOCATION = testProps.getProperty("test.project.location");
+    TEST_SA_KEY_FILE = testProps.getProperty("test.project.sa.key.file");
+    TEST_MODEL_NAME = testProps.getProperty("test.model.name");
+    TEST_PROMPT = testProps.getProperty("test.prompt");
+  }
+
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void testVertexAiWithServiceAccountKey() {
     // Given: Service Account key file path
-    String saKeyPath = "c:\\java\\backup\\GCP\\Vertex\\skorec.json";
+    String saKeyPath = TEST_SA_KEY_FILE;
     File saKeyFile = new File(saKeyPath);
 
     // Verify the SA key file exists
     assertThat(saKeyFile).as("Service Account key file should exist").exists();
 
     // Given: CLI arguments
-    String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", "us-central1",
-        "--sa-key-file", saKeyPath, "--model-name", "gemini.pro",
-        "What is 2+2? Answer in one word."};
+    String[] args = {"--project-id", TEST_PROJECT_ID, "--location", TEST_LOCATION, "--sa-key-file", saKeyPath, "--model-name",
+        TEST_MODEL_NAME, TEST_PROMPT};
 
     // When: Execute the CLI command
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -62,10 +85,6 @@ class VertexAiMasterMainTest {
 
       String output = outContent.toString();
       String errorOutput = errContent.toString();
-
-      // Verify model alias resolution in stderr
-      assertThat(errorOutput).as("Should resolve gemini.pro alias")
-          .contains("Resolved model alias 'gemini.pro'");
 
       // Verify response is not empty
       assertThat(output.trim()).as("Response should not be empty").isNotEmpty();
@@ -88,6 +107,164 @@ class VertexAiMasterMainTest {
   }
 
   @Test
+  void shouldRequireLocationInNormalMode() {
+    // Given: CLI arguments without --location in normal mode
+    String[] args = {"--project-id", "test-project", "--sa-key-file", "test.json", "--model-name", "gemini.pro", "Test prompt"};
+
+    // When: Execute the CLI command
+    ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+    PrintStream originalErr = System.err;
+
+    try {
+      System.setErr(new PrintStream(errContent));
+
+      VertexAiMasterMain app = new VertexAiMasterMain();
+      CommandLine cmd = new CommandLine(app);
+      int exitCode = cmd.execute(args);
+
+      // Then: Should fail with error about missing location
+      assertThat(exitCode).as("CLI should fail when location is missing in normal mode").isNotEqualTo(0);
+
+      String errorOutput = errContent.toString();
+      assertThat(errorOutput).as("Error should mention required location").containsAnyOf("location", "Location");
+
+    } finally {
+      System.setErr(originalErr);
+    }
+  }
+
+  @Test
+  void shouldNotRequireLocationInRegionCheckMode() {
+    // Given: CLI arguments without --location in region check mode
+    String[] args = {"--project-id", "test-project", "--sa-key-file", "test.json", "--check-all-regions", "--cluster", "US", "--model-name",
+        "gemini.pro", "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+
+    // Parsing should not fail (execution will fail due to invalid key, but parsing succeeds)
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing succeeds (location is optional)
+    assertThat(parseResult).as("Parsing should succeed without --location in region check mode").isNotNull();
+  }
+
+  @Test
+  void shouldNotRequireLocationInWorldwideMode() {
+    // Given: CLI arguments without --location in worldwide mode
+    String[] args = {"--project-id", "test-project", "--sa-key-file", "test.json", "--worldwide", "--model-name", "gemini.pro",
+        "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+
+    // Parsing should not fail (execution will fail due to invalid key, but parsing succeeds)
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing succeeds (location is optional)
+    assertThat(parseResult).as("Parsing should succeed without --location in worldwide mode").isNotNull();
+  }
+
+  @Test
+  void shouldRejectBothModelNameAndModelFile() {
+    // Given: CLI arguments with both --model-name and -model-file
+    String[] args = {"--project-id", "test-project", "--location", "us-central1", "--model-name", "gemini-pro", "-model-file",
+        "models.properties", "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+
+    // Then: Should fail with mutual exclusivity error
+    try {
+      cmd.parseArgs(args);
+      assertThat(false).as("Should have thrown exception for mutually exclusive options").isTrue();
+    } catch (CommandLine.MaxValuesExceededException e) {
+      // Picocli throws MaxValuesExceededException for exclusive groups
+      assertThat(e.getMessage()).as("Error message should mention the exclusive group").containsAnyOf("model-file", "modelName",
+          "expected only one");
+    }
+  }
+
+  @Test
+  void shouldAcceptModelNameOnly() throws IOException {
+    // Given: CLI arguments with only --model-name
+    String[] args = {"--project-id", "test-project", "--location", "us-central1", "--model-name", "gemini-1.5-pro-001", "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing succeeds
+    assertThat(parseResult).as("Parsing should succeed with --model-name only").isNotNull();
+  }
+
+  @Test
+  void shouldAcceptModelFileOnly() throws IOException {
+    // Given: A temporary model properties file
+    File tempModelFile = File.createTempFile("test-models", ".properties");
+    tempModelFile.deleteOnExit();
+
+    try (PrintWriter writer = new PrintWriter(new FileWriter(tempModelFile))) {
+      writer.println("test-model=gemini-1.5-pro-001");
+      writer.println("test-model.provider=test-provider");
+    }
+
+    // Given: CLI arguments with only -model-file
+    String[] args = {"--project-id", "test-project", "--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(),
+        "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing succeeds
+    assertThat(parseResult).as("Parsing should succeed with -model-file only").isNotNull();
+  }
+
+  @Test
+  void shouldUseDefaultModelWhenNeitherSpecified() {
+    // Given: CLI arguments without --model-name or -model-file
+    String[] args = {"--project-id", "test-project", "--location", "us-central1", "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing succeeds (default model should be used)
+    assertThat(parseResult).as("Parsing should succeed without model specification").isNotNull();
+  }
+
+  @Test
+  void shouldLoadModelFileWhenSpecified() throws IOException {
+    // Given: A temporary model properties file with custom alias
+    File tempModelFile = File.createTempFile("custom-models", ".properties");
+    tempModelFile.deleteOnExit();
+
+    try (PrintWriter writer = new PrintWriter(new FileWriter(tempModelFile))) {
+      writer.println("custom-alias=gemini-1.5-flash-001");
+      writer.println("custom-alias.provider=google");
+    }
+
+    // Given: CLI arguments with -model-file
+    String[] args = {"--project-id", "test-project", "--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(),
+        "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing should succeed
+    assertThat(parseResult).as("Parsing should succeed").isNotNull();
+  }
+
+  @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void testVertexAiWithExpiredServiceAccountKey_ShouldFail() {
     // Given: Expired Service Account key file path
@@ -98,8 +275,8 @@ class VertexAiMasterMainTest {
     assertThat(expiredKeyFile).as("Expired Service Account key file should exist").exists();
 
     // Given: CLI arguments with expired credentials
-    String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", "us-central1",
-        "--sa-key-file", expiredKeyPath, "--model-name", "gemini.pro", "Test prompt"};
+    String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", "us-central1", "--sa-key-file", expiredKeyPath,
+        "--model-name", "gemini.pro", "Test prompt"};
 
     // When: Execute the CLI command with expired credentials
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -116,8 +293,7 @@ class VertexAiMasterMainTest {
       int exitCode = cmd.execute(args);
 
       // Then: MUST fail with non-zero exit code (no ADC fallback allowed)
-      assertThat(exitCode).as(
-          "CLI must fail with non-zero exit code when expired key is provided - ADC fallback must not occur")
+      assertThat(exitCode).as("CLI must fail with non-zero exit code when expired key is provided - ADC fallback must not occur")
           .isNotEqualTo(0);
 
     } finally {
@@ -136,11 +312,9 @@ class VertexAiMasterMainTest {
     }
 
     // Verify error message indicates authentication/token failure (not ADC fallback)
-    assertThat(errorOutput)
-        .as("Error output must indicate authentication/token failure (no ADC fallback)")
-        .containsAnyOf("TokenResponseException", "invalid_grant", "401", "403", "expired",
-            "unauthorized", "Permission", "denied", "access denied", "authentication",
-            "credentials", "Failed to load service account key", "ADC fallback is disabled");
+    assertThat(errorOutput).as("Error output must indicate authentication/token failure (no ADC fallback)").containsAnyOf(
+        "TokenResponseException", "invalid_grant", "401", "403", "expired", "unauthorized", "Permission", "denied", "access denied",
+        "authentication", "credentials", "Failed to load service account key", "ADC fallback is disabled");
   }
 
   // Region to city mapping
@@ -196,7 +370,7 @@ class VertexAiMasterMainTest {
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void shouldAllModelsPass() throws IOException {
     // Given: Working Service Account key file path
-    String workingKeyPath = "keys\\working.json";
+    String workingKeyPath = TEST_SA_KEY_FILE;
     File workingKeyFile = new File(workingKeyPath);
 
     // Verify the working key file exists
@@ -211,16 +385,22 @@ class VertexAiMasterMainTest {
       modelProps.load(input);
     }
 
-    // Extract all model aliases dynamically from properties (exclude .region and .provider)
-    List<String> modelAliases = modelProps.keySet().stream().map(Object::toString).filter(
-        key -> !key.endsWith(".region") && !key.endsWith(".provider") && !key.endsWith(".openai"))
-        .sorted().toList();
+    // Extract all model aliases dynamically from properties (exclude .region, .provider, .openai, .api)
+    List<String> modelAliases = modelProps.keySet().stream().map(Object::toString)
+        .filter(key -> !key.endsWith(".region") && !key.endsWith(".provider") && !key.endsWith(".openai") && !key.endsWith(".api")).sorted()
+        .toList();
 
     String testPrompt = "200+200*99=?";
 
+    // Create results directory if it doesn't exist
+    File resultsDir = new File("results");
+    if (!resultsDir.exists()) {
+      resultsDir.mkdirs();
+    }
+
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-    String csvFileName = "model-test-results_" + timestamp + ".csv";
+    String csvFileName = "results/model-test-results_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
     logger.info("Starting model validation test. Results will be saved to: {}", csvFileName);
@@ -250,14 +430,12 @@ class VertexAiMasterMainTest {
 
           // Test in each region
           for (String testRegion : allRegions) {
-            passedCount += testModelInRegion(modelAlias, testRegion, workingKeyPath, testPrompt,
-                csvWriter, modelProps);
+            passedCount += testModelInRegion(modelAlias, testRegion, workingKeyPath, testPrompt, csvWriter, modelProps);
           }
         } else {
           // Normal single region test
           logger.info("\nTesting model: {} (region: {})", modelAlias, region);
-          passedCount += testModelInRegion(modelAlias, region, workingKeyPath, testPrompt,
-              csvWriter, modelProps);
+          passedCount += testModelInRegion(modelAlias, region, workingKeyPath, testPrompt, csvWriter, modelProps);
         }
       }
     }
@@ -272,12 +450,12 @@ class VertexAiMasterMainTest {
   /**
    * Tests a model in a specific region and returns 1 if passed, 0 if failed.
    */
-  private int testModelInRegion(String modelAlias, String region, String workingKeyPath,
-      String testPrompt, PrintWriter csvWriter, Properties modelProps) {
+  private int testModelInRegion(String modelAlias, String region, String workingKeyPath, String testPrompt, PrintWriter csvWriter,
+      Properties modelProps) {
     int passed = 0;
 
-    String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
-        "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
+    String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name", modelAlias,
+        testPrompt};
 
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -349,22 +527,20 @@ class VertexAiMasterMainTest {
           // Look for exception messages
           String[] lines = errorOutput.split("\\n");
           for (String line : lines) {
-            if (line.contains("Exception")
-                || (line.contains("Error") && !line.contains("[INFO]"))) {
+            if (line.contains("Exception") || (line.contains("Error") && !line.contains("[INFO]"))) {
               errorMsg = line.trim();
               // If line is too long, try to extract just the exception message
               if (errorMsg.length() > 200) {
                 int colonIdx = errorMsg.indexOf(":");
                 if (colonIdx > 0 && colonIdx < errorMsg.length() - 1) {
-                  errorMsg = errorMsg.substring(0, colonIdx + 1) + errorMsg.substring(colonIdx + 1,
-                      Math.min(errorMsg.length(), colonIdx + 150));
+                  errorMsg = errorMsg.substring(0, colonIdx + 1)
+                      + errorMsg.substring(colonIdx + 1, Math.min(errorMsg.length(), colonIdx + 150));
                 }
               }
               break;
             }
           }
-        } else if (errorOutput.contains("PERMISSION_DENIED")
-            || errorOutput.contains("UNAUTHENTICATED")) {
+        } else if (errorOutput.contains("PERMISSION_DENIED") || errorOutput.contains("UNAUTHENTICATED")) {
           errorMsg = "Permission denied or authentication failed";
         } else if (errorOutput.contains("NOT_FOUND")) {
           errorMsg = "Model or resource not found";
@@ -400,8 +576,7 @@ class VertexAiMasterMainTest {
 
     // Write to CSV: full-model-name,region,city,answer
     String city = getRegionCity(region);
-    csvWriter
-        .println(String.format("\"%s\",\"%s\",\"%s\",\"%s\"", fullModelName, region, city, answer));
+    csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\"", fullModelName, region, city, answer));
     csvWriter.flush();
 
     return passed;
@@ -419,7 +594,7 @@ class VertexAiMasterMainTest {
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void shouldPassOneAtLeastforUS() throws IOException {
     // Given: Working Service Account key file path
-    String workingKeyPath = "keys\\working.json";
+    String workingKeyPath = TEST_SA_KEY_FILE;
     File workingKeyFile = new File(workingKeyPath);
 
     // Verify the working key file exists
@@ -430,12 +605,18 @@ class VertexAiMasterMainTest {
     String testPrompt = "200+200*99=?";
 
     // All US regions to test
-    List<String> usRegions = Arrays.asList("us-central1", "us-east1", "us-east4", "us-east5",
-        "us-south1", "us-west1", "us-west2", "us-west3", "us-west4");
+    List<String> usRegions = Arrays.asList("us-central1", "us-east1", "us-east4", "us-east5", "us-south1", "us-west1", "us-west2",
+        "us-west3", "us-west4");
+
+    // Create results directory if it doesn't exist
+    File resultsDir = new File("results");
+    if (!resultsDir.exists()) {
+      resultsDir.mkdirs();
+    }
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-    String csvFileName = "region-discovery_" + timestamp + ".csv";
+    String csvFileName = "results/region-discovery_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
     logger.info("Testing model '{}' across all US regions...", testModelAlias);
@@ -451,8 +632,8 @@ class VertexAiMasterMainTest {
       for (String region : usRegions) {
         logger.info("\nTesting region: {}", region);
 
-        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
-            "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
+        String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name",
+            testModelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -527,8 +708,7 @@ class VertexAiMasterMainTest {
 
         // Write to CSV
         String city = getRegionCity(region);
-        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias,
-            region, city, status, response));
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias, region, city, status, response));
         csvWriter.flush();
       }
     }
@@ -541,16 +721,14 @@ class VertexAiMasterMainTest {
     logger.info("Results saved to: {}", csvFileName);
 
     // Assert that at least one region worked
-    assertThat(successCount)
-        .as("At least one US region should support the model '" + testModelAlias + "'")
-        .isGreaterThan(0);
+    assertThat(successCount).as("At least one US region should support the model '" + testModelAlias + "'").isGreaterThan(0);
   }
 
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void shouldDiscoverDeepseekR1Region() throws IOException {
     // Given: Working Service Account key file path
-    String workingKeyPath = "keys\\working.json";
+    String workingKeyPath = TEST_SA_KEY_FILE;
     File workingKeyFile = new File(workingKeyPath);
 
     // Verify the working key file exists
@@ -561,12 +739,18 @@ class VertexAiMasterMainTest {
     String testPrompt = "200+200*99=?";
 
     // All US regions to test
-    List<String> usRegions = Arrays.asList("us-central1", "us-east1", "us-east4", "us-east5",
-        "us-south1", "us-west1", "us-west2", "us-west3", "us-west4");
+    List<String> usRegions = Arrays.asList("us-central1", "us-east1", "us-east4", "us-east5", "us-south1", "us-west1", "us-west2",
+        "us-west3", "us-west4");
+
+    // Create results directory if it doesn't exist
+    File resultsDir = new File("results");
+    if (!resultsDir.exists()) {
+      resultsDir.mkdirs();
+    }
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-    String csvFileName = "deepseek-r1-region-discovery_" + timestamp + ".csv";
+    String csvFileName = "results/deepseek-r1-region-discovery_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
     logger.info("Testing DeepSeek R1 model '{}' across all US regions...", testModelAlias);
@@ -582,8 +766,8 @@ class VertexAiMasterMainTest {
       for (String region : usRegions) {
         logger.info("\nTesting region: {}", region);
 
-        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
-            "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
+        String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name",
+            testModelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -658,8 +842,7 @@ class VertexAiMasterMainTest {
 
         // Write to CSV
         String city = getRegionCity(region);
-        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias,
-            region, city, status, response));
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias, region, city, status, response));
         csvWriter.flush();
       }
     }
@@ -672,16 +855,14 @@ class VertexAiMasterMainTest {
     logger.info("Results saved to: {}", csvFileName);
 
     // Assert that at least one region worked
-    assertThat(successCount)
-        .as("At least one US region should support DeepSeek R1 model '" + testModelAlias + "'")
-        .isGreaterThan(0);
+    assertThat(successCount).as("At least one US region should support DeepSeek R1 model '" + testModelAlias + "'").isGreaterThan(0);
   }
 
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
   void shouldDiscoverMiniMaxWorldwide() throws IOException {
     // Given: Working Service Account key file path
-    String workingKeyPath = "keys\\working.json";
+    String workingKeyPath = TEST_SA_KEY_FILE;
     File workingKeyFile = new File(workingKeyPath);
 
     // Verify the working key file exists
@@ -694,9 +875,15 @@ class VertexAiMasterMainTest {
     VertexAiServiceImpl service = new VertexAiServiceImpl();
     List<String> allRegions = service.getAllRegions();
 
+    // Create results directory if it doesn't exist
+    File resultsDir = new File("results");
+    if (!resultsDir.exists()) {
+      resultsDir.mkdirs();
+    }
+
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-    String csvFileName = "minimax-region-discovery_" + timestamp + ".csv";
+    String csvFileName = "results/minimax-region-discovery_" + timestamp + ".csv";
     File csvFile = new File(csvFileName);
 
     logger.info("Testing MiniMax model '{}' across worldwide regions...", testModelAlias);
@@ -712,8 +899,8 @@ class VertexAiMasterMainTest {
       for (String region : allRegions) {
         logger.info("\nTesting region: {}", region);
 
-        String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", region,
-            "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
+        String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name",
+            testModelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -788,8 +975,7 @@ class VertexAiMasterMainTest {
 
         // Write to CSV
         String city = getRegionCity(region);
-        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias,
-            region, city, status, response));
+        csvWriter.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"", testModelAlias, region, city, status, response));
         csvWriter.flush();
       }
     }
@@ -802,8 +988,6 @@ class VertexAiMasterMainTest {
     logger.info("Results saved to: {}", csvFileName);
 
     // Validate coverage: all regions processed
-    assertThat(successCount + failCount)
-        .as("All regions should be processed for '" + testModelAlias + "'")
-        .isEqualTo(allRegions.size());
+    assertThat(successCount + failCount).as("All regions should be processed for '" + testModelAlias + "'").isEqualTo(allRegions.size());
   }
 }

@@ -45,10 +45,8 @@ public class WorldwideAvailabilityClient {
     for (String region : allRegions) {
       try {
         // Create a new request for this specific region
-        RegionCheckRequest regionRequest = RegionCheckRequest.builder()
-            .withAuthenticationConfig(request.getAuthenticationConfig())
-            .withModelName(request.getModelName()).withTestPrompt(request.getTestPrompt())
-            .withRegions(List.of(region)).build();
+        RegionCheckRequest regionRequest = RegionCheckRequest.builder().withAuthenticationConfig(request.getAuthenticationConfig())
+            .withModelName(request.getModelName()).withTestPrompt(request.getTestPrompt()).withRegions(List.of(region)).build();
 
         // Check this specific region
         RegionCheckResult regionResult = vertexAiService.checkRegionAvailability(regionRequest);

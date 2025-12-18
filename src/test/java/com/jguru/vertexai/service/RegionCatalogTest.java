@@ -26,7 +26,6 @@ class RegionCatalogTest {
 
   @Test
   void shouldReturnCombinedRegionList() {
-    assertThat(RegionCatalog.getAllRegions()).isNotEmpty()
-        .containsAll(RegionCatalog.getRegions(RegionCatalog.Cluster.CANADA));
+    assertThat(RegionCatalog.getAllRegions()).isNotEmpty().containsAll(RegionCatalog.getRegions(RegionCatalog.Cluster.CANADA));
   }
 }

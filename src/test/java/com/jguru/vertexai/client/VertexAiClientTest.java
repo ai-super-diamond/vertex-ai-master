@@ -21,8 +21,8 @@ class VertexAiClientTest {
   private GenerationResult mockResult;
 
   /**
-   * Helper method to set the private modelProperties field for testing purposes. This is the only
-   * place where reflection is used in this test class.
+   * Helper method to set the private modelProperties field for testing purposes. This is the only place where reflection is used in this
+   * test class.
    */
   private void setModelProperties(VertexAiClient client, Properties properties) {
     try {
@@ -37,9 +37,8 @@ class VertexAiClientTest {
   @BeforeEach
   void setUp() {
     // Given: A real client instance
-    client = new VertexAiClient(
-        AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
-            .withProjectId("test-project").withLocation("us-central1").build());
+    client = new VertexAiClient(AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId("test-project").withLocation("us-central1").build());
 
     // And: A spy of that client
     spyClient = spy(client);
@@ -54,8 +53,8 @@ class VertexAiClientTest {
     String apiKey = "test-api-key";
 
     // When
-    VertexAiClient client = new VertexAiClient(AuthenticationConfig.builder()
-        .withType(AuthenticationType.API_KEY).withApiKey(apiKey).build());
+    VertexAiClient client = new VertexAiClient(
+        AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey(apiKey).build());
 
     // Then
     assertThat(client).isNotNull();
@@ -68,9 +67,8 @@ class VertexAiClientTest {
     String location = "us-central1";
 
     // When
-    VertexAiClient client = new VertexAiClient(
-        AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
-            .withProjectId(projectId).withLocation(location).build());
+    VertexAiClient client = new VertexAiClient(AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId(projectId).withLocation(location).build());
 
     // Then
     assertThat(client).isNotNull();
@@ -84,9 +82,8 @@ class VertexAiClientTest {
     String location = "us-central1";
 
     // When
-    VertexAiClient client = new VertexAiClient(
-        AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
-            .withSaKeyFile(saKeyFile).withProjectId(projectId).withLocation(location).build());
+    VertexAiClient client = new VertexAiClient(AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withSaKeyFile(saKeyFile).withProjectId(projectId).withLocation(location).build());
 
     // Then
     assertThat(client).isNotNull();
@@ -95,8 +92,8 @@ class VertexAiClientTest {
   @Test
   void shouldLoadModelProperties() {
     // Given
-    VertexAiClient client = new VertexAiClient(AuthenticationConfig.builder()
-        .withType(AuthenticationType.API_KEY).withApiKey("test-key").build());
+    VertexAiClient client = new VertexAiClient(
+        AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey("test-key").build());
 
     // When & Then
     // We can't directly test the private modelProperties field without reflection,
@@ -107,10 +104,8 @@ class VertexAiClientTest {
   @Test
   void shouldHandleInvalidServiceAccountKey() {
     // Given
-    AuthenticationConfig authConfig = AuthenticationConfig.builder()
-        .withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
-        .withSaKeyFile("/nonexistent/path/key.json").withProjectId("test-project")
-        .withLocation("us-central1").build();
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withSaKeyFile("/nonexistent/path/key.json").withProjectId("test-project").withLocation("us-central1").build();
 
     VertexAiClient client = new VertexAiClient(authConfig);
 
@@ -123,8 +118,8 @@ class VertexAiClientTest {
   @Test
   void shouldHandleApiKeyAuthentication() throws IOException {
     // Given
-    AuthenticationConfig authConfig = AuthenticationConfig.builder()
-        .withType(AuthenticationType.API_KEY).withApiKey("invalid-api-key").build();
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey("invalid-api-key")
+        .build();
 
     VertexAiClient client = new VertexAiClient(authConfig);
 
@@ -139,9 +134,8 @@ class VertexAiClientTest {
   @Test
   void shouldHandleServiceAccountADC() throws IOException {
     // Given
-    AuthenticationConfig authConfig = AuthenticationConfig.builder()
-        .withType(AuthenticationType.SERVICE_ACCOUNT_ADC).withProjectId("nonexistent-project")
-        .withLocation("us-central1").build();
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId("nonexistent-project").withLocation("us-central1").build();
 
     VertexAiClient client = new VertexAiClient(authConfig);
 
@@ -162,16 +156,14 @@ class VertexAiClientTest {
     setModelProperties(spyClient, customProps);
 
     // And: We stub the protected methods to prevent real network calls and return a mock result
-    doReturn(mockResult).when(spyClient).callChatCompletionsApi(anyString(), anyString(),
-        anyString());
+    doReturn(mockResult).when(spyClient).callChatCompletionsApi(anyString(), anyString(), anyString());
     doReturn(mockResult).when(spyClient).callStandardVertexAi(anyString(), anyString());
 
     // When: The public method is called
     spyClient.callVertexAi("maas-model", "a prompt");
 
     // Then: Verify that ONLY the correct internal method was called
-    verify(spyClient, times(1)).callChatCompletionsApi(eq("test-provider"), eq("maas-model"),
-        eq("a prompt"));
+    verify(spyClient, times(1)).callChatCompletionsApi(eq("test-provider"), eq("maas-model"), eq("a prompt"));
     verify(spyClient, never()).callStandardVertexAi(anyString(), anyString());
   }
 
@@ -184,16 +176,14 @@ class VertexAiClientTest {
     setModelProperties(spyClient, customProps);
 
     // And: We stub the protected methods to prevent real network calls and return a mock result
-    doReturn(mockResult).when(spyClient).callChatCompletionsApi(eq("openai"), eq("openai-model"),
-        eq("a prompt"));
+    doReturn(mockResult).when(spyClient).callChatCompletionsApi(eq("openai"), eq("openai-model"), eq("a prompt"));
     doReturn(mockResult).when(spyClient).callStandardVertexAi(anyString(), anyString());
 
     // When: The public method is called
     spyClient.callVertexAi("openai-model", "a prompt");
 
     // Then: Verify that ONLY the correct internal method was called
-    verify(spyClient, times(1)).callChatCompletionsApi(eq("openai"), eq("openai-model"),
-        eq("a prompt"));
+    verify(spyClient, times(1)).callChatCompletionsApi(eq("openai"), eq("openai-model"), eq("a prompt"));
     verify(spyClient, never()).callStandardVertexAi(anyString(), anyString());
   }
 
@@ -205,10 +195,8 @@ class VertexAiClientTest {
     setModelProperties(spyClient, customProps);
 
     // And: We stub the protected methods to prevent real network calls and return a mock result
-    doReturn(mockResult).when(spyClient).callStandardVertexAi(eq("standard-model-name"),
-        eq("a prompt"));
-    doReturn(mockResult).when(spyClient).callChatCompletionsApi(anyString(), anyString(),
-        anyString());
+    doReturn(mockResult).when(spyClient).callStandardVertexAi(eq("standard-model-name"), eq("a prompt"));
+    doReturn(mockResult).when(spyClient).callChatCompletionsApi(anyString(), anyString(), anyString());
 
     // When: The public method is called
     spyClient.callVertexAi("standard-model-name", "a prompt");
@@ -227,8 +215,7 @@ class VertexAiClientTest {
     setModelProperties(spyClient, customProps);
 
     // And: We stub the protected methods to prevent real network calls and return a mock result
-    doReturn(mockResult).when(spyClient).callChatCompletionsApi(anyString(), anyString(),
-        anyString());
+    doReturn(mockResult).when(spyClient).callChatCompletionsApi(anyString(), anyString(), anyString());
     doReturn(mockResult).when(spyClient).callStandardVertexAi(anyString(), anyString());
 
     // When: The public method is called with the model alias
@@ -236,8 +223,7 @@ class VertexAiClientTest {
 
     // Then: Verify that callChatCompletionsApi was called with the correct model name (not the
     // alias)
-    verify(spyClient, times(1)).callChatCompletionsApi(eq("google-openai"),
-        eq("google/gemini-2.0-flash-001"), eq("a prompt"));
+    verify(spyClient, times(1)).callChatCompletionsApi(eq("google-openai"), eq("google/gemini-2.0-flash-001"), eq("a prompt"));
     verify(spyClient, never()).callStandardVertexAi(anyString(), anyString());
   }
 }

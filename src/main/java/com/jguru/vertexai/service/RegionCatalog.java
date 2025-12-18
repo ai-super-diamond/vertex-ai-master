@@ -13,9 +13,8 @@ import java.util.Set;
  * Central catalogue of Google Cloud regions grouped by geographic cluster.
  *
  * <p>
- * The catalogue keeps the region definitions in a single place so that they can be reused across
- * clients, services, and utilities without duplicating large literal lists. Callers receive
- * defensive copies making it safe to modify the returned lists in tests.
+ * The catalogue keeps the region definitions in a single place so that they can be reused across clients, services, and utilities without
+ * duplicating large literal lists. Callers receive defensive copies making it safe to modify the returned lists in tests.
  * </p>
  */
 public final class RegionCatalog {
@@ -28,24 +27,18 @@ public final class RegionCatalog {
    * Well-known region clusters with their aliases and region membership.
    */
   public enum Cluster {
-    US(Set.of("US", "USA", "UNITED_STATES"), List.of("us-central1", "us-east1", "us-east4",
-        "us-east5", "us-south1", "us-west1", "us-west2", "us-west3", "us-west4")), EUROPE(
+    US(Set.of("US", "USA", "UNITED_STATES"),
+        List.of("us-central1", "us-east1", "us-east4", "us-east5", "us-south1", "us-west1", "us-west2", "us-west3", "us-west4")), EUROPE(
             Set.of("EUROPE", "EU"),
-            List.of("europe-central2", "europe-north1", "europe-southwest1", "europe-west1",
-                "europe-west2", "europe-west3", "europe-west4", "europe-west6", "europe-west8",
-                "europe-west9", "europe-west12")), ASIA(
+            List.of("europe-central2", "europe-north1", "europe-southwest1", "europe-west1", "europe-west2", "europe-west3", "europe-west4",
+                "europe-west6", "europe-west8", "europe-west9", "europe-west12")), ASIA(
                     Set.of("ASIA", "APAC", "ASIA_PACIFIC"),
-                    List.of("asia-east1", "asia-east2", "asia-northeast1", "asia-northeast2",
-                        "asia-northeast3", "asia-south1", "asia-south2", "asia-southeast1",
-                        "asia-southeast2", "australia-southeast1",
-                        "australia-southeast2")), MIDDLE_EAST(Set.of("MIDDLE_EAST", "ME"),
-                            List.of("me-central1", "me-central2", "me-west1")), AFRICA(
-                                Set.of("AFRICA"),
-                                List.of("africa-south1")), CANADA(Set.of("CANADA", "CA"),
-                                    List.of("northamerica-northeast1",
-                                        "northamerica-northeast2")), SOUTH_AMERICA(
-                                            Set.of("SOUTH_AMERICA", "SA"),
-                                            List.of("southamerica-east1", "southamerica-west1"));
+                    List.of("asia-east1", "asia-east2", "asia-northeast1", "asia-northeast2", "asia-northeast3", "asia-south1",
+                        "asia-south2", "asia-southeast1", "asia-southeast2", "australia-southeast1", "australia-southeast2")), MIDDLE_EAST(
+                            Set.of("MIDDLE_EAST", "ME"),
+                            List.of("me-central1", "me-central2", "me-west1")), AFRICA(Set.of("AFRICA"), List.of("africa-south1")), CANADA(
+                                Set.of("CANADA", "CA"), List.of("northamerica-northeast1", "northamerica-northeast2")), SOUTH_AMERICA(
+                                    Set.of("SOUTH_AMERICA", "SA"), List.of("southamerica-east1", "southamerica-west1"));
 
     private final Set<String> aliases;
     private final List<String> regions;

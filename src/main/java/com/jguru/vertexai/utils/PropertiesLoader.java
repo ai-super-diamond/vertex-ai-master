@@ -12,8 +12,8 @@ import java.util.Objects;
 import java.util.Properties;
 
 /**
- * Loads {@link Properties} files from either an external filesystem override or a classpath
- * resource. This consolidates the repeated boilerplate across services, clients, and utilities.
+ * Loads {@link Properties} files from either an external filesystem override or a classpath resource. This consolidates the repeated
+ * boilerplate across services, clients, and utilities.
  */
 public final class PropertiesLoader {
 
@@ -24,10 +24,8 @@ public final class PropertiesLoader {
   /**
    * Loads properties using the following precedence:
    * <ol>
-   * <li>If the system property referenced by {@code systemPropertyKey} is set and points to an
-   * existing file, that file is loaded.</li>
-   * <li>Otherwise a classpath resource located at {@code resourcePath} is loaded, when
-   * present.</li>
+   * <li>If the system property referenced by {@code systemPropertyKey} is set and points to an existing file, that file is loaded.</li>
+   * <li>Otherwise a classpath resource located at {@code resourcePath} is loaded, when present.</li>
    * </ol>
    *
    * @param logger
@@ -58,8 +56,7 @@ public final class PropertiesLoader {
             logger.warn("Failed to load {} from {}: {}", resourcePath, configPath, e.getMessage());
           }
         } else {
-          logger.warn("System property {} points to missing file: {}", systemPropertyKey,
-              configPath);
+          logger.warn("System property {} points to missing file: {}", systemPropertyKey, configPath);
         }
       }
     }

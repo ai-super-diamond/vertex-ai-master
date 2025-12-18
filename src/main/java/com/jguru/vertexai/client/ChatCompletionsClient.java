@@ -19,8 +19,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
- * Client for interacting with Vertex AI OpenAI-compatible Chat Completions API. Used for MaaS
- * (Model-as-a-Service) models that require the /chat/completions endpoint.
+ * Client for interacting with Vertex AI OpenAI-compatible Chat Completions API. Used for MaaS (Model-as-a-Service) models that require the
+ * /chat/completions endpoint.
  */
 public class ChatCompletionsClient {
 
@@ -46,16 +46,14 @@ public class ChatCompletionsClient {
     this.location = location;
     this.credentials = credentials;
     this.gson = new Gson();
-    logger.debug("ChatCompletionsClient initialized with projectId: {}, location: {}", projectId,
-        location);
+    logger.debug("ChatCompletionsClient initialized with projectId: {}, location: {}", projectId, location);
   }
 
   /**
    * Calls the Chat Completions API endpoint.
    *
    * @param modelName
-   *          Full model name with provider prefix (e.g.,
-   *          "qwen/qwen3-coder-480b-a35b-instruct-maas")
+   *          Full model name with provider prefix (e.g., "qwen/qwen3-coder-480b-a35b-instruct-maas")
    * @param prompt
    *          User prompt text
    * @return Response text from the model
@@ -73,9 +71,8 @@ public class ChatCompletionsClient {
     } else if (location != null && location.equalsIgnoreCase("global")) {
       endpointLocation = "global"; // Explicitly set for global endpoint
     }
-    String endpoint = String.format(
-        "https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host,
-        projectId, endpointLocation);
+    String endpoint = String.format("https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host, projectId,
+        endpointLocation);
 
     logger.debug("Using endpoint: {}", endpoint);
 
@@ -134,8 +131,7 @@ public class ChatCompletionsClient {
    */
   private String parseSuccessResponse(HttpURLConnection conn) throws IOException {
     StringBuilder response = new StringBuilder();
-    try (BufferedReader br = new BufferedReader(
-        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
       String responseLine;
       while ((responseLine = br.readLine()) != null) {
         response.append(responseLine.trim());
@@ -170,11 +166,9 @@ public class ChatCompletionsClient {
   /**
    * Parses error response from the API.
    */
-  private String parseErrorResponse(HttpURLConnection conn, int responseCode, String modelName)
-      throws IOException {
+  private String parseErrorResponse(HttpURLConnection conn, int responseCode, String modelName) throws IOException {
     StringBuilder error = new StringBuilder();
-    try (BufferedReader br = new BufferedReader(
-        new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
       String responseLine;
       while ((responseLine = br.readLine()) != null) {
         error.append(responseLine.trim());

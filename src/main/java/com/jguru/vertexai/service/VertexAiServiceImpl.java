@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
  * Implementation of VertexAiService containing all business logic.
@@ -82,17 +83,16 @@ public class VertexAiServiceImpl implements VertexAiService {
   @Override
   public RegionCheckResult checkRegionAvailability(RegionCheckRequest request) throws Exception {
     Map<String, String> results = new HashMap<>();
-    String prompt = (request.getTestPrompt() != null && !request.getTestPrompt().isEmpty())
-        ? request.getTestPrompt()
-        : "Hello";
+    String prompt = (request.getTestPrompt() != null && !request.getTestPrompt().isEmpty()) ? request.getTestPrompt() : "Hello";
     String resolvedModel = resolveModelName(request.getModelName());
     String saKeyFile = request.getAuthenticationConfig().getSaKeyFile();
     String projectId = request.getAuthenticationConfig().getProjectId();
+    boolean debugMode = request.isDebug();
 
     for (String region : request.getRegions()) {
       try {
-        AuthenticationConfig regionAuthConfig = buildRegionAuthenticationConfig(
-            request.getAuthenticationConfig(), projectId, saKeyFile, region);
+        AuthenticationConfig regionAuthConfig = buildRegionAuthenticationConfig(request.getAuthenticationConfig(), projectId, saKeyFile,
+            region);
         VertexAiClient client = new VertexAiClient(regionAuthConfig);
         String response = client.callVertexAi(resolvedModel, prompt);
         if (response != null && !response.isEmpty()) {
@@ -104,21 +104,28 @@ public class VertexAiServiceImpl implements VertexAiService {
         String errorMsg = e.getMessage();
         // Extract meaningful error info using ErrorType enum
         ErrorType errorType = ErrorType.fromMessage(errorMsg);
-        results.put(region, errorType.formatMessage(errorMsg));
+        String formattedError = errorType.formatMessage(errorMsg);
+        if (debugMode) {
+          formattedError = buildDebugError(formattedError, e);
+        }
+        results.put(region, formattedError);
       } catch (Exception e) {
         String errorMsg = e.getMessage();
         ErrorType errorType = ErrorType.fromMessage(errorMsg);
-        results.put(region, errorType.formatMessage(errorMsg));
+        String formattedError = errorType.formatMessage(errorMsg);
+        if (debugMode) {
+          formattedError = buildDebugError(formattedError, e);
+        }
+        results.put(region, formattedError);
       }
     }
 
     return new RegionCheckResult(results);
   }
 
-  private AuthenticationConfig buildRegionAuthenticationConfig(AuthenticationConfig baseConfig,
-      String projectId, String saKeyFile, String region) {
-    AuthenticationConfig.Builder builder = AuthenticationConfig.builder()
-        .withType(baseConfig.getType());
+  private AuthenticationConfig buildRegionAuthenticationConfig(AuthenticationConfig baseConfig, String projectId, String saKeyFile,
+      String region) {
+    AuthenticationConfig.Builder builder = AuthenticationConfig.builder().withType(baseConfig.getType());
 
     switch (baseConfig.getType()) {
       case API_KEY :
@@ -148,5 +155,27 @@ public class VertexAiServiceImpl implements VertexAiService {
    */
   public List<String> getAllRegions() {
     return regionProvider.getAllRegions();
+  }
+
+  private String buildDebugError(String base, Exception e) {
+    String exceptionPart = String.format("%s | Exception: %s", base, e.getClass().getSimpleName());
+
+    // Summarize cause chain classes, e.g., ApiException -> IOException -> SocketTimeoutException
+    java.util.List<Throwable> chain = ExceptionUtils.getThrowableList(e);
+    String chainSummary = chain.stream().map(t -> t.getClass().getSimpleName()).distinct()
+        .collect(java.util.stream.Collectors.joining(" -> "));
+
+    String result = String.format("%s | CauseChain: %s", exceptionPart, chainSummary);
+
+    // Root cause details (class, message, and first stack location)
+    Throwable root = ExceptionUtils.getRootCause(e);
+    if (root != null) {
+      StackTraceElement[] st = root.getStackTrace();
+      String at = (st != null && st.length > 0) ? String.format("%s:%d", st[0].getClassName(), st[0].getLineNumber()) : "unknown";
+      result = String.format("%s | RootCause: %s: %s | At: %s", result, root.getClass().getSimpleName(), ExceptionUtils.getMessage(root),
+          at);
+    }
+
+    return result;
   }
 }
