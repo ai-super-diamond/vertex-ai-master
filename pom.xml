@@ -15,9 +15,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <picocli.version>4.7.7</picocli.version>
-    <google.genai.version>1.26.0</google.genai.version>
+    <google.genai.version>1.32.0</google.genai.version>
     <junit.version>5.12.1</junit.version>
-    <assertj.version>3.27.0</assertj.version>
+    <assertj.version>3.27.6</assertj.version>
     <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
     <maven.shade.plugin.version>3.6.1</maven.shade.plugin.version>
     <maven.surefire.plugin.version>3.5.4</maven.surefire.plugin.version>

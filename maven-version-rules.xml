@@ -1,0 +1,28 @@
+<ruleset comparisonMethod="maven"
+         xmlns="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0
+         https://www.mojohaus.org/versions-maven-plugin/xsd/rule-2.0.0.xsd">
+    <ignoreVersions>
+        <!-- Alpha versions: alpha, Alpha, ALPHA, a -->
+        <ignoreVersion type="regex">.*[-_\.](alpha|Alpha|ALPHA|a)[_\.\-]?[0-9]*</ignoreVersion>
+        <!-- Beta versions: beta, Beta, BETA, b -->
+        <ignoreVersion type="regex">.*[-_\.](beta|Beta|BETA|b)[_\.\-]?[0-9]*</ignoreVersion>
+        <!-- Milestone, Release Candidate, M, RC, milestone, MILESTONE -->
+        <ignoreVersion type="regex">.*[-_\.](rc|RC|M|milestone|MILESTONE)[_\.\-]?[0-9]*</ignoreVersion>
+        <!-- Snapshot versions -->
+        <ignoreVersion type="regex">.*[-_\.](snapshot|SNAPSHOT).*</ignoreVersion>
+        <!-- Preview versions: preview, PREVIEW, pre, PRE -->
+        <ignoreVersion type="regex">.*[-_\.](preview|PREVIEW|pre|PRE).*</ignoreVersion>
+        <!-- Additional common pre-release patterns -->
+        <ignoreVersion type="regex">.*[-_\.](ea|EA|earlyaccess|EarlyAccess|EARLYACCESS).*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-_\.](dev|DEV|development|DEVELOPMENT).*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-_\.](test|TEST|testing|TESTING).*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-_\.](cr|CR|candidate|CANDIDATE).*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-_\.](alpha\d+|beta\d+|rc\d+|m\d+).*</ignoreVersion>
+        <!-- Prerelease, incubating, etc -->
+        <ignoreVersion type="regex">.*[-_\.](prerelease|PRERELEASE|pre\-release|PRE\-RELEASE).*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-_\.](incubating|INCUBATING).*</ignoreVersion>
+        <!-- Version strings that start with 0 (often pre-release) but we might want to keep? Not included -->
+    </ignoreVersions>
+</ruleset>
