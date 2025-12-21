@@ -1,6 +1,6 @@
 @echo off
 REM Configuration
-set PROJECT=vertex--project-durovcik
+set PROJECT=vertex-ai-project-kotvan
 set KEY=keys\sa-key.json
 set PROMPT=200+200*99=?
 set MODELS_FILE=src\main\resources\models.properties

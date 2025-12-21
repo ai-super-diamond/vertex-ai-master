@@ -120,13 +120,13 @@ mvn exec:java -Dexec.mainClass="com.example.demo.VertexAiMasterMain" -Dexec.args
 A native executable offers faster startup times and can be run without a JVM.
 
 1.  Ensure you have met all the prerequisites, especially GraalVM.
-2.  Run the `build-exe.cmd` script in the project root:
+2.  Run the `build-exe.cmd` script from the `bin/` directory:
 
 ```sh
-.\build-exe.cmd
+.\bin\build-exe.cmd
 ```
 
-This script will compile the application into a native executable named `vertex.exe` and place it in the project root directory.
+This script will compile the application into a native executable named `vertex.exe` and place it in the `bin/` directory.
 
 ## Usage
 
@@ -137,21 +137,21 @@ Once you have the `vertex.exe` executable (or JAR file), you can run it from you
 **Using Service Account with explicit key:**
 ```sh
 # Basic usage with model alias
-./vertex.exe --project-id vertex-ai-project-skorec --location us-central1 --sa-key-file "C:\path\to\key.json" --model-name gemini.pro "What is the capital of France?"
+./bin/vertex.exe --project-id vertex-ai-project-skorec --location us-central1 --sa-key-file "C:\path\to\key.json" --model-name gemini.pro "What is the capital of France?"
 
 # Short flags
-./vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -m gemini.flash "Explain quantum computing"
+./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -m gemini.flash "Explain quantum computing"
 ```
 
 **Using API Key (Gemini API):**
 ```sh
-./vertex.exe --api-key YOUR_API_KEY --model-name gemini.pro "Write a haiku about AI"
+./bin/vertex.exe --api-key YOUR_API_KEY --model-name gemini.pro "Write a haiku about AI"
 ```
 
 **Using Application Default Credentials:**
 ```sh
 # Ensure GOOGLE_APPLICATION_CREDENTIALS is set in environment
-./vertex.exe --project-id PROJECT --location us-central1 -m gemini.pro "Hello world"
+./bin/vertex.exe --project-id PROJECT --location us-central1 -m gemini.pro "Hello world"
 ```
 
 ### Model Selection
@@ -160,14 +160,14 @@ Use model aliases from `models.properties` or full model names:
 
 ```sh
 # Using alias
-./vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m gemini.flash "Your prompt"
+./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m gemini.flash "Your prompt"
 
 # Using full model name
-./vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m gemini-2.5-flash "Your prompt"
+./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m gemini-2.5-flash "Your prompt"
 
 # MaaS models (auto-routed to Chat Completions API)
-./vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m deepseek.r1.0528 "200+200*99=?"
-./vertex.exe --sa-key-file key.json --project-id PROJECT --location us-south1 -m qwen3.coder.480b.a35b "Write quicksort in Python"
+./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m deepseek.r1.0528 "200+200*99=?"
+./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-south1 -m qwen3.coder.480b.a35b "Write quicksort in Python"
 ```
 
 ### Region Availability Check
@@ -176,10 +176,10 @@ Test model availability across all regions in a geographic cluster:
 
 ```sh
 # Check DeepSeek R1 in all US regions
-./vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --check-all-regions --cluster US --model-name deepseek.r1.0528 "Test prompt"
+./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --check-all-regions --cluster US --model-name deepseek.r1.0528 "Test prompt"
 
 # Short flags - check Qwen in EU regions
-./vertex.exe --project-id PROJECT --location eu --sa-key-file key.json -car -c EU -m qwen3.coder.480b.a35b "Test"
+./bin/vertex.exe --project-id PROJECT --location eu --sa-key-file key.json -car -c EU -m qwen3.coder.480b.a35b "Test"
 
 # Available clusters: US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA
 ```
@@ -190,10 +190,10 @@ Test model availability across all worldwide regions (42 GCP regions):
 
 ```sh
 # Check Gemini Pro availability worldwide
-./vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --worldwide --model-name gemini.pro "Test prompt"
+./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --worldwide --model-name gemini.pro "Test prompt"
 
 # Short flags
-./vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -w -m gemini.flash "Test"
+./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -w -m gemini.flash "Test"
 ```
 
 **Worldwide check output:**
@@ -306,3 +306,9 @@ d:\java\maven\bin\mvn.cmd clean package
 # Run JAR directly
 java -jar target/demo-0.0.1-SNAPSHOT.jar --help
 ```
+
+## Documentation
+
+For detailed development guidelines and architecture information, see:
+- [`docs/AGENTS.md`](docs/AGENTS.md) - Instructions for AI coding agents
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - Detailed architecture documentation

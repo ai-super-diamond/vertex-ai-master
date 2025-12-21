@@ -48,7 +48,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String saKeyFile;
   }
 
-  @ArgGroup(exclusive = true, multiplicity = "1")
+  @ArgGroup(multiplicity = "1")
   Auth auth;
 
   static class Auth {
@@ -67,7 +67,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String modelFile;
   }
 
-  @ArgGroup(exclusive = true, multiplicity = "0..1")
+  @ArgGroup()
   ModelSource modelSource;
 
   @Option(names = {"--check-all-regions", "-car"}, description = "Check model availability across all regions in a cluster.")
@@ -155,7 +155,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
       GenerationResult result = vertexAiService.generateContent(request);
 
       if (result.isSuccess()) {
-        System.out.println(result.getContent());
+        logger.info(result.getContent());
         return 0;
       } else {
         logger.error("Error generating content: {}", result.getErrorMessage());
@@ -192,12 +192,12 @@ public class VertexAiMasterMain implements Callable<Integer> {
     }
 
     // Single model test
-    System.out.println("\n=== Region Availability Check ===");
-    System.out.println("Model: " + getEffectiveModelName());
-    System.out.println("Cluster: " + cluster);
-    System.out.println("Regions to test: " + regions.size());
-    System.out.println("Test prompt: " + testPrompt);
-    System.out.println("\nTesting...");
+    logger.info("\n=== Region Availability Check ===");
+    logger.info("Model: {}", getEffectiveModelName());
+    logger.info("Cluster: {}", cluster);
+    logger.info("Regions to test: {}", regions.size());
+    logger.info("Test prompt: {}", testPrompt);
+    logger.info("\nTesting...");
 
     // Create authentication config
     AuthenticationConfig authConfig = resolveServiceAccountAuthentication();
@@ -216,23 +216,23 @@ public class VertexAiMasterMain implements Callable<Integer> {
     int successCount = result.getSuccessCount();
     int failCount = result.getFailCount();
 
-    System.out.println("\n=== Results ===");
+    logger.info("\n=== Results ===");
     for (Map.Entry<String, String> entry : result.getRegionResults().entrySet()) {
       String region = entry.getKey();
       String status = entry.getValue();
       boolean success = "SUCCESS".equals(status);
 
       if (success) {
-        System.out.println("✓ " + region + ": " + status);
+        logger.info("✓ {}: {}", region, status);
       } else {
-        System.err.println("✗ " + region + ": " + status);
+        logger.error("✗ {}: {}", region, status);
       }
     }
 
-    System.out.println("\n=== Summary ===");
-    System.out.println("Total: " + result.getTotalCount());
-    System.out.println("Success: " + successCount);
-    System.out.println("Failed: " + failCount);
+    logger.info("\n=== Summary ===");
+    logger.info("Total: {}", result.getTotalCount());
+    logger.info("Success: {}", successCount);
+    logger.info("Failed: {}", failCount);
 
     return result.hasSuccess() ? 0 : 1;
   }
@@ -266,15 +266,15 @@ public class VertexAiMasterMain implements Callable<Integer> {
       }
     }
 
-    System.out.println("\n========================================");
-    System.out.println("Testing All Models from File");
-    System.out.println("========================================");
-    System.out.println("Model file: " + modelFile);
-    System.out.println("Models found: " + modelAliases.size());
-    System.out.println("Cluster: " + cluster);
-    System.out.println("Regions to test: " + regions.size());
-    System.out.println("Test prompt: " + testPrompt);
-    System.out.println();
+    logger.info("\n========================================");
+    logger.info("Testing All Models from File");
+    logger.info("========================================");
+    logger.info("Model file: {}", modelFile);
+    logger.info("Models found: {}", modelAliases.size());
+    logger.info("Cluster: {}", cluster);
+    logger.info("Regions to test: {}", regions.size());
+    logger.info("Test prompt: {}", testPrompt);
+    logger.info("");
 
     // Create authentication config
     AuthenticationConfig authConfig = resolveServiceAccountAuthentication();
@@ -291,9 +291,9 @@ public class VertexAiMasterMain implements Callable<Integer> {
     // Test each model
     for (String modelAlias : modelAliases) {
       totalModels++;
-      System.out.println("\n========================================");
-      System.out.println("Testing Model: " + modelAlias);
-      System.out.println("========================================");
+      logger.info("\n========================================");
+      logger.info("Testing Model: {}", modelAlias);
+      logger.info("========================================");
 
       // Check if model has global region
       String modelRegion = props.getProperty(modelAlias + ".region");
@@ -303,7 +303,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
       List<String> regionsToTest = isGlobalModel ? java.util.List.of("global") : regions;
 
       if (isGlobalModel) {
-        System.out.println("(Global model - testing with global endpoint only)");
+        logger.info("(Global model - testing with global endpoint only)");
       }
 
       // Create region check request for this model
@@ -318,39 +318,40 @@ public class VertexAiMasterMain implements Callable<Integer> {
           result.getFailCount(), result.getRegionResults()));
 
       // Display results for this model
-      System.out.println("\n=== Results ===");
+      logger.info("\n=== Results ===");
       for (Map.Entry<String, String> entry : result.getRegionResults().entrySet()) {
         String region = entry.getKey();
         String status = entry.getValue();
         boolean success = "SUCCESS".equals(status);
 
         if (success) {
-          System.out.println("✓ " + region + ": " + status);
+          logger.info("✓ {}: {}", region, status);
         } else {
-          System.err.println("✗ " + region + ": " + status);
+          logger.error("✗ {}: {}", region, status);
         }
       }
 
-      System.out.println("\nSummary for " + modelAlias + ":");
-      System.out.println("  Success: " + result.getSuccessCount());
-      System.out.println("  Failed: " + result.getFailCount());
+      logger.info("\nSummary for {}:", modelAlias);
+      logger.info("  Success: {}", result.getSuccessCount());
+      logger.info("  Failed: {}", result.getFailCount());
 
       if (result.hasSuccess()) {
         successfulModels++;
       }
     }
 
-    System.out.println("\n========================================");
-    System.out.println("Overall Summary");
-    System.out.println("========================================");
-    System.out.println("Total models tested: " + totalModels);
-    System.out.println("Models with at least one success: " + successfulModels);
-    System.out.println("Models with all failures: " + (totalModels - successfulModels));
+    logger.info("\n========================================");
+    logger.info("Overall Summary");
+    logger.info("========================================");
+    logger.info("Total models tested: {}", totalModels);
+    logger.info("Models with at least one success: {}", successfulModels);
+    logger.info("Models with all failures: {}", totalModels - successfulModels);
 
     // Generate Markdown report
     try {
-      String reportPath = MarkdownReportGenerator.generateReport("results", cluster, modelTestResults, props, testPrompt, regions.size());
-      System.out.println("\n📄 Markdown report generated: " + reportPath);
+      String reportPath = MarkdownReportGenerator.generateReport("results", cluster, modelTestResults, props, testPrompt, regions.size(),
+          authConfig.getProjectId());
+      logger.info("\n📄 Markdown report generated: {}", reportPath);
     } catch (java.io.IOException e) {
       logger.warn("Failed to generate Markdown report: {}", e.getMessage());
     }
@@ -430,10 +431,10 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String testPrompt = (textOption != null && !textOption.isEmpty()) ? textOption : (text != null ? text : "200+200*99=?");
     String modelAlias = getEffectiveModelName();
 
-    System.out.println("\n=== Worldwide Region Availability Check ===");
-    System.out.println("Model: " + modelAlias);
-    System.out.println("Test prompt: " + testPrompt);
-    System.out.println("\nTesting...");
+    logger.info("\n=== Worldwide Region Availability Check ===");
+    logger.info("Model: {}", modelAlias);
+    logger.info("Test prompt: {}", testPrompt);
+    logger.info("\nTesting...");
 
     // Create authentication config
     AuthenticationConfig authConfig = resolveServiceAccountAuthentication();
@@ -453,23 +454,23 @@ public class VertexAiMasterMain implements Callable<Integer> {
     int successCount = result.getSuccessCount();
     int failCount = result.getFailCount();
 
-    System.out.println("\n=== Results ===");
+    logger.info("\n=== Results ===");
     for (Map.Entry<String, String> entry : result.getRegionResults().entrySet()) {
       String region = entry.getKey();
       String status = entry.getValue();
       boolean success = "SUCCESS".equals(status);
 
       if (success) {
-        System.out.println("✓ " + region + ": " + status);
+        logger.info("✓ {}: {}", region, status);
       } else {
-        System.err.println("✗ " + region + ": " + status);
+        logger.error("✗ {}: {}", region, status);
       }
     }
 
-    System.out.println("\n=== Summary ===");
-    System.out.println("Total: " + result.getTotalCount());
-    System.out.println("Success: " + successCount);
-    System.out.println("Failed: " + failCount);
+    logger.info("\n=== Summary ===");
+    logger.info("Total: {}", result.getTotalCount());
+    logger.info("Success: {}", successCount);
+    logger.info("Failed: {}", failCount);
 
     // Generate Markdown report for worldwide check
     try {
@@ -489,8 +490,8 @@ public class VertexAiMasterMain implements Callable<Integer> {
           new MarkdownReportGenerator.ModelTestResult(modelAlias, successCount, failCount, result.getRegionResults()));
 
       String reportPath = MarkdownReportGenerator.generateReport("results", "WORLDWIDE", modelResults, props, testPrompt,
-          result.getTotalCount());
-      System.out.println("\n📄 Markdown report generated: " + reportPath);
+          result.getTotalCount(), authConfig.getProjectId());
+      logger.info("\n📄 Markdown report generated: {}", reportPath);
     } catch (java.io.IOException e) {
       logger.warn("Failed to generate Markdown report: {}", e.getMessage());
     }
@@ -511,7 +512,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
       LocalDateTime now = LocalDateTime.now();
       DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd·MM·yyyy_HH꞉mm꞉ss");
       String timestamp = now.format(formatter);
-      outputFile = String.format("results/debug-%s.txt", timestamp);
+      outputFile = String.format("results/runtime-results-%s.txt", timestamp);
     }
 
     // Redirect output to file if specified

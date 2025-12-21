@@ -33,7 +33,7 @@ d:\java\maven\bin\mvn.cmd clean package
 java -jar target/demo-0.0.1-SNAPSHOT.jar --help
 
 # Build native executable (requires GraalVM + Visual Studio 2022)
-.\build-exe.cmd
+.\bin\build-exe.cmd
 ```
 
 ## Testing Instructions

@@ -30,12 +30,14 @@ public class MarkdownReportGenerator {
    *          The prompt used for testing
    * @param regionsCount
    *          Number of regions tested
+   * @param projectId
+   *          Google Cloud project ID for URL construction
    * @return Path to the generated report file
    * @throws IOException
    *           if report generation fails
    */
   public static String generateReport(String resultsDir, String testMode, Map<String, ModelTestResult> modelResults, Properties modelProps,
-      String testPrompt, int regionsCount) throws IOException {
+      String testPrompt, int regionsCount, String projectId) throws IOException {
 
     String timestamp = LocalDateTime.now().format(FILENAME_FORMATTER);
     String reportFileName = String.format("%s/report-%s.md", resultsDir, timestamp);
@@ -43,7 +45,7 @@ public class MarkdownReportGenerator {
     try (PrintWriter writer = new PrintWriter(new FileWriter(reportFileName))) {
       writeHeader(writer, testMode, testPrompt, regionsCount, modelResults.size());
       writeSummaryTable(writer, modelResults);
-      writeDetailedResults(writer, modelResults, modelProps);
+      writeDetailedResults(writer, modelResults, modelProps, projectId);
       writeFooter(writer);
     }
 
@@ -99,12 +101,15 @@ public class MarkdownReportGenerator {
     writer.println();
   }
 
-  private static void writeDetailedResults(PrintWriter writer, Map<String, ModelTestResult> modelResults, Properties modelProps) {
+  private static void writeDetailedResults(PrintWriter writer, Map<String, ModelTestResult> modelResults, Properties modelProps,
+      String projectId) {
     writer.println("## 📝 Detailed Model Results");
     writer.println();
 
-    writer.println("| # | Model Alias | Full Model Name | Provider | Region | API Type | Success | Failed | Status |");
-    writer.println("|---|-------------|-----------------|----------|--------|----------|---------|--------|--------|");
+    writer.println(
+        "| # | Model Alias | Full Model Name | Provider | Region | API Type | Success | Failed | Status | Final Successful URL(s) |");
+    writer.println(
+        "|---|-------------|-----------------|----------|--------|----------|---------|--------|--------|--------------------------|");
 
     int index = 1;
     for (Map.Entry<String, ModelTestResult> entry : modelResults.entrySet()) {
@@ -116,9 +121,10 @@ public class MarkdownReportGenerator {
       String region = modelProps.getProperty(alias + ".region", "us-central1");
       String apiType = determineApiType(modelProps, alias);
       String status = result.successCount > 0 ? "✅" : "❌";
+      String successfulUrls = buildSuccessfulUrls(apiType, result.regionResults, projectId);
 
-      writer.println(String.format("| %d | `%s` | `%s` | %s | %s | %s | %d | %d | %s |", index++, alias, fullName, provider, region,
-          apiType, result.successCount, result.failCount, status));
+      writer.println(String.format("| %d | `%s` | `%s` | %s | %s | %s | %d | %d | %s | %s |", index++, alias, fullName, provider, region,
+          apiType, result.successCount, result.failCount, status, successfulUrls));
     }
 
     writer.println();
@@ -138,6 +144,27 @@ public class MarkdownReportGenerator {
     }
 
     return "Vertex AI SDK";
+  }
+
+  private static String buildSuccessfulUrls(String apiType, Map<String, String> regionResults, String projectId) {
+    if (!"Chat Completions".equals(apiType)) {
+      return "N/A";
+    }
+
+    StringBuilder urls = new StringBuilder();
+    for (Map.Entry<String, String> entry : regionResults.entrySet()) {
+      if ("SUCCESS".equals(entry.getValue())) {
+        String region = entry.getKey();
+        String host = "global".equals(region) ? "aiplatform.googleapis.com" : region + "-aiplatform.googleapis.com";
+        String url = String.format("https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host, projectId, region);
+        if (urls.length() > 0) {
+          urls.append(", ");
+        }
+        urls.append(url);
+      }
+    }
+
+    return urls.length() > 0 ? urls.toString() : "None";
   }
 
   private static void writeFooter(PrintWriter writer) {
