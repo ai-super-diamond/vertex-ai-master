@@ -2,22 +2,72 @@
 
 echo --- Building Native Executable ---
 
-REM Activate the 'native' profile and package the application
+REM Determine the absolute path of the script directory (bin/)
+set SCRIPT_DIR=%~dp0
+
+REM Remove trailing backslash if present
+if "%SCRIPT_DIR:~-1%"=="\" set SCRIPT_DIR=%SCRIPT_DIR:~0,-1%
+
+REM Determine project root (parent directory of bin/)
+for %%I in ("%SCRIPT_DIR%\..") do set PROJECT_ROOT=%%~fI
+
+REM Verify that pom.xml exists at the project root
+if not exist "%PROJECT_ROOT%\pom.xml" (
+    echo ERROR: pom.xml not found at project root: %PROJECT_ROOT%
+    echo Please ensure the script is located in the bin/ directory of the project.
+    exit /b 1
+)
+
+echo Project root: %PROJECT_ROOT%
+echo.
+
+REM Change to project root and run Maven
+pushd "%PROJECT_ROOT%"
+
+echo Running Maven native build...
 d:\java\maven\bin\mvn -Pnative package
 
-REM Check if the executable was created
-if not exist "target\vertex.exe" (
+REM Check if Maven succeeded
+if errorlevel 1 (
     echo.
-    echo ERROR: Native executable not found in target directory.
+    echo ERROR: Maven build failed. Please check the error messages above.
+    popd
     exit /b 1
 )
 
 echo.
-echo --- Moving Executable to bin Directory ---
+echo --- Maven Build Successful ---
 
-REM Move the executable from the target directory to the bin directory
-move "target\vertex.exe" . > nul
+REM Check where the executable was created
+if exist "target\vertex.exe" (
+    echo Found vertex.exe in target directory.
+
+    REM Move executable to bin directory
+    echo Moving executable to bin directory...
+    move /Y "target\vertex.exe" "%SCRIPT_DIR%\vertex.exe" > nul
+
+    if errorlevel 1 (
+        echo ERROR: Failed to move vertex.exe from target to bin directory.
+        popd
+        exit /b 1
+    )
+
+    echo Executable moved successfully.
+) else if exist "%SCRIPT_DIR%\vertex.exe" (
+    echo Found vertex.exe already in bin directory (no move needed).
+) else (
+    echo.
+    echo ERROR: Native executable not found in target directory or bin directory.
+    echo Expected location: %PROJECT_ROOT%\target\vertex.exe
+    echo Alternative location: %SCRIPT_DIR%\vertex.exe
+    popd
+    exit /b 1
+)
+
+REM Restore original directory
+popd
 
 echo.
 echo --- Build Complete ---
 echo Your executable 'vertex.exe' is ready in the bin directory.
+echo Location: %SCRIPT_DIR%\vertex.exe

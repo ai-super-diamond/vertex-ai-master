@@ -1,9 +1,9 @@
 @echo off
 REM Configuration
 set PROJECT=vertex--project-durovcik
-set KEY=keys\sa-key.json
+set KEY=sa-key.json
 set PROMPT=200+200*99=?
-set MODELS_FILE=src\main\resources\models.properties
+set MODELS_FILE=models.properties
 
 echo ========================================
 echo Testing All Models in EU Regions
@@ -21,13 +21,8 @@ echo ========================================
 echo Testing all models from file
 echo ========================================
 echo.
-REM Ensure shaded JAR exists; build if missing
-if not exist "target\vertex-0.0.1-SNAPSHOT.jar" (
-  echo JAR not found. Building project...
-  d:\java\maven\bin\mvn.cmd clean package -DskipTests
-)
 
-java -jar target\vertex-0.0.1-SNAPSHOT.jar --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster EU -model-file %MODELS_FILE% --text "%PROMPT%"
+vertex.exe --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster EU -model-file %MODELS_FILE% --text "%PROMPT%"
 
 echo.
 echo ========================================

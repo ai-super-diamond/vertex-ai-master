@@ -155,12 +155,17 @@
                 <goals>
                   <goal>build</goal>
                 </goals>
+                <configuration>
+                  <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
+                  <imageName>vertex</imageName>
+                  <outputDirectory>C:\java\projects\github-repos\vertex-ai-master/bin</outputDirectory>
+                </configuration>
               </execution>
             </executions>
             <configuration>
               <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
               <imageName>vertex</imageName>
-              <outputDirectory>${project.basedir}/bin</outputDirectory>
+              <outputDirectory>C:\java\projects\github-repos\vertex-ai-master/bin</outputDirectory>
             </configuration>
           </plugin>
         </plugins>
