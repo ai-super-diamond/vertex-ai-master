@@ -21,10 +21,26 @@
     <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
     <maven.shade.plugin.version>3.6.1</maven.shade.plugin.version>
     <maven.surefire.plugin.version>3.5.4</maven.surefire.plugin.version>
-    <spotless.version>2.43.0</spotless.version>
+    <maven.resources.plugin.version>3.4.0</maven.resources.plugin.version>
+    <maven.javadoc.plugin.version>3.5.0</maven.javadoc.plugin.version>
+    <maven.source.plugin.version>3.5.0</maven.source.plugin.version>
+    <maven.dependency.plugin.version>3.5.0</maven.dependency.plugin.version>
+    <maven.checkstyle.plugin.version>3.6.0</maven.checkstyle.plugin.version>
+    <spotless.version>3.1.0</spotless.version>
     <checkstyle.version>10.20.2</checkstyle.version>
     <bytebuddy.version>1.14.12</bytebuddy.version>
     <spotbugs.plugin.version>4.8.6.0</spotbugs.plugin.version>
+    <gson.version>2.11.0</gson.version>
+    <commons-lang3.version>3.20.0</commons-lang3.version>
+    <slf4j-api.version>2.0.16</slf4j-api.version>
+    <logback-classic.version>1.5.19</logback-classic.version>
+    <spotless-maven-plugin.version>4.33</spotless-maven-plugin.version>
+    <lombok.version>1.18.36</lombok.version>
+    <mockito-inline.version>5.2.0</mockito-inline.version>
+    <mockito-core.version>5.15.2</mockito-core.version>
+    <google-auth-library-bom.version>1.40.0</google-auth-library-bom.version>
+    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+
   </properties>
 
   <dependencyManagement>
@@ -32,7 +48,7 @@
       <dependency>
         <groupId>com.google.auth</groupId>
         <artifactId>google-auth-library-bom</artifactId>
-        <version>1.40.0</version>
+        <version>${google-auth-library-bom.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -61,26 +77,26 @@
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-      <version>2.11.0</version>
+      <version>${gson.version}</version>
     </dependency>
 
     <!-- Apache Commons Lang for String/Exception utilities -->
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.20.0</version>
+      <version>${commons-lang3.version}</version>
     </dependency>
 
     <!-- Logging Dependencies -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>2.0.16</version>
+      <version>${slf4j-api.version}</version>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.5.16</version>
+      <version>${logback-classic.version}</version>
     </dependency>
 
     <!-- Test Dependencies -->
@@ -107,14 +123,14 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>5.15.2</version>
+      <version>${mockito-core.version}</version>
       <scope>test</scope>
     </dependency>
     <!-- Add mockito-inline for spying on final classes -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
-      <version>5.2.0</version>
+      <version>${mockito-inline.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -150,6 +166,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>${maven.shade.plugin.version}</version>
+
         <executions>
           <execution>
             <goals>
@@ -157,6 +174,14 @@
             </goals>
             <phase>package</phase>
             <configuration>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
@@ -170,8 +195,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven.surefire.plugin.version}</version>
+
         <configuration>
-          <argLine>-Dnet.bytebuddy.experimental=true --add-opens=java.base/sun.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${bytebuddy.version}/byte-buddy-agent-${bytebuddy.version}.jar</argLine>
+          <argLine>-Dnet.bytebuddy.experimental=true --add-opens=java.base/java.lang=ALL-UNNAMED --enable-native-access=ALL-UNNAMED -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${bytebuddy.version}/byte-buddy-agent-${bytebuddy.version}.jar</argLine>
         </configuration>
         <dependencies>
           <dependency>
@@ -189,7 +215,7 @@
         <configuration>
           <java>
             <eclipse>
-              <version>4.32</version>
+              <version>${spotless-maven-plugin.version}</version>
               <file>${project.basedir}/eclipse-formatter.xml</file>
             </eclipse>
             <removeUnusedImports/>
@@ -207,7 +233,7 @@
           <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.36</version>
+            <version>${lombok.version}</version>
           </dependency>
         </dependencies>
         <executions>
@@ -223,7 +249,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>${maven-checkstyle-plugin.version}</version>
         <configuration>
           <configLocation>google_checks.xml</configLocation>
           <consoleOutput>true</consoleOutput>
@@ -242,7 +268,8 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>3.3.1</version>
+
+        <version>${maven.resources.plugin.version}</version>
         <executions>
           <execution>
             <id>copy-models-properties</id>
@@ -275,7 +302,6 @@
           <plugin>
             <groupId>org.graalvm.buildtools</groupId>
             <artifactId>native-maven-plugin</artifactId>
-            <version>0.11.2</version>
             <configuration>
               <mainClass>com.jguru.vertexai.VertexAiMasterMain</mainClass>
               <imageName>vertex</imageName>
