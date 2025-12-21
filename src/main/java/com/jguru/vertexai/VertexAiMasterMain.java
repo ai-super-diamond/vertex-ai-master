@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -503,9 +505,12 @@ public class VertexAiMasterMain implements Callable<Integer> {
     // Generate default output file if not specified and in debug/region-check mode
     if (outputFile == null && (debug || checkAllRegions || worldwide)) {
       // Create results directory if it doesn't exist
-      File resultsDir = new File("results");
-      if (!resultsDir.exists()) {
-        resultsDir.mkdirs();
+      Path resultsDirPath = Paths.get("results");
+      try {
+        Files.createDirectories(resultsDirPath);
+      } catch (Exception e) {
+        logger.error("Failed to create results directory: {}", resultsDirPath, e);
+        throw new RuntimeException("Failed to create results directory: " + resultsDirPath, e);
       }
 
       // Generate timestamped filename with special characters · and ꞉
@@ -519,13 +524,24 @@ public class VertexAiMasterMain implements Callable<Integer> {
     if (outputFile != null) {
       originalOut = System.out;
       originalErr = System.err;
-      File file = new File(outputFile);
-      file.getParentFile().mkdirs();
-      fileOut = new PrintStream(new FileOutputStream(file), true, "UTF-8");
+      Path filePath = Paths.get(outputFile);
+      Path parentDirPath = filePath.getParent();
+
+      // Create parent directories if they don't exist
+      if (parentDirPath != null) {
+        try {
+          Files.createDirectories(parentDirPath);
+        } catch (Exception e) {
+          logger.error("Failed to create parent directory for output file: {}", parentDirPath, e);
+          throw new RuntimeException("Failed to create parent directory for output file: " + parentDirPath, e);
+        }
+      }
+
+      fileOut = new PrintStream(new FileOutputStream(filePath.toFile()), true, "UTF-8");
       System.setOut(fileOut);
       System.setErr(fileOut);
       // Log to original console that output is being redirected
-      originalOut.println("Writing output to: " + file.getAbsolutePath());
+      originalOut.println("Writing output to: " + filePath.toAbsolutePath());
     }
   }
 

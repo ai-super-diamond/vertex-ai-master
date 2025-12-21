@@ -1,5 +1,6 @@
 package com.jguru.vertexai;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.slf4j.Logger;
@@ -13,6 +14,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -84,10 +88,12 @@ class VertexAiMasterMainTest {
       assertThat(exitCode).as("CLI should exit successfully").isEqualTo(0);
 
       String output = outContent.toString();
-      String errorOutput = errContent.toString();
 
       // Verify response is not empty
       assertThat(output.trim()).as("Response should not be empty").isNotEmpty();
+
+      // Verify stderr is empty on success
+      assertThat(errContent.toString().trim()).as("Stderr should be empty on success").isEmpty();
 
       logger.info("[TEST] Response received: {}", output.trim());
 
@@ -99,10 +105,10 @@ class VertexAiMasterMainTest {
 
     // Print captured output for debugging (after streams are restored)
     if (outContent.size() > 0) {
-      logger.info("=== CLI Output ===\n{}", outContent.toString());
+      logger.info("=== CLI Output ===\n{}", outContent);
     }
     if (errContent.size() > 0) {
-      logger.error("=== CLI Error Output ===\n{}", errContent.toString());
+      logger.error("=== CLI Error Output ===\n{}", errContent);
     }
   }
 
@@ -189,7 +195,7 @@ class VertexAiMasterMainTest {
   }
 
   @Test
-  void shouldAcceptModelNameOnly() throws IOException {
+  void shouldAcceptModelNameOnly() {
     // Given: CLI arguments with only --model-name
     String[] args = {"--project-id", "test-project", "--location", "us-central1", "--model-name", "gemini-1.5-pro-001", "Test prompt"};
 
@@ -393,22 +399,31 @@ class VertexAiMasterMainTest {
     String testPrompt = "200+200*99=?";
 
     // Create results directory if it doesn't exist
-    File resultsDir = new File("results");
-    if (!resultsDir.exists()) {
-      resultsDir.mkdirs();
+    Path resultsDirPath = Paths.get("results");
+    try {
+      Files.createDirectories(resultsDirPath);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create results directory: " + resultsDirPath, e);
     }
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     String csvFileName = "results/model-test-results_" + timestamp + ".csv";
-    File csvFile = new File(csvFileName);
+    Path csvFilePath = Paths.get(csvFileName);
+
+    // Ensure parent directory exists
+    try {
+      Files.createDirectories(csvFilePath.getParent());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create parent directory for CSV file: " + csvFilePath.getParent(), e);
+    }
 
     logger.info("Starting model validation test. Results will be saved to: {}", csvFileName);
 
     int passedCount = 0;
     int failedCount = 0;
 
-    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFilePath.toFile()))) {
       // CSV Header
       csvWriter.println("full-model-name,region,city,answer");
 
@@ -430,12 +445,12 @@ class VertexAiMasterMainTest {
 
           // Test in each region
           for (String testRegion : allRegions) {
-            passedCount += testModelInRegion(modelAlias, testRegion, workingKeyPath, testPrompt, csvWriter, modelProps);
+            passedCount += testModelInRegion(modelAlias, testRegion, workingKeyPath, testPrompt, csvWriter);
           }
         } else {
           // Normal single region test
           logger.info("\nTesting model: {} (region: {})", modelAlias, region);
-          passedCount += testModelInRegion(modelAlias, region, workingKeyPath, testPrompt, csvWriter, modelProps);
+          passedCount += testModelInRegion(modelAlias, region, workingKeyPath, testPrompt, csvWriter);
         }
       }
     }
@@ -450,8 +465,7 @@ class VertexAiMasterMainTest {
   /**
    * Tests a model in a specific region and returns 1 if passed, 0 if failed.
    */
-  private int testModelInRegion(String modelAlias, String region, String workingKeyPath, String testPrompt, PrintWriter csvWriter,
-      Properties modelProps) {
+  private int testModelInRegion(String modelAlias, String region, String workingKeyPath, String testPrompt, PrintWriter csvWriter) {
     int passed = 0;
 
     String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name", modelAlias,
@@ -463,7 +477,7 @@ class VertexAiMasterMainTest {
     PrintStream originalErr = System.err;
 
     String fullModelName = "";
-    String answer = "";
+    String answer;
 
     try {
       System.setOut(new PrintStream(outContent));
@@ -510,52 +524,7 @@ class VertexAiMasterMainTest {
         logger.info("[PASS] {} in {} - Answer: {}", modelAlias, region, answer);
       } else {
         // Extract meaningful error message from error output
-        String errorMsg = "Unknown error";
-
-        // Try to find specific error messages in stderr
-        if (errorOutput.contains("[ERROR]")) {
-          // Extract the first ERROR line
-          String[] lines = errorOutput.split("\\n");
-          for (String line : lines) {
-            if (line.contains("[ERROR]")) {
-              // Remove [ERROR] prefix and timestamp
-              errorMsg = line.replaceFirst(".*\\[ERROR\\]\\s*", "").trim();
-              break;
-            }
-          }
-        } else if (errorOutput.contains("Exception") || errorOutput.contains("Error")) {
-          // Look for exception messages
-          String[] lines = errorOutput.split("\\n");
-          for (String line : lines) {
-            if (line.contains("Exception") || (line.contains("Error") && !line.contains("[INFO]"))) {
-              errorMsg = line.trim();
-              // If line is too long, try to extract just the exception message
-              if (errorMsg.length() > 200) {
-                int colonIdx = errorMsg.indexOf(":");
-                if (colonIdx > 0 && colonIdx < errorMsg.length() - 1) {
-                  errorMsg = errorMsg.substring(0, colonIdx + 1)
-                      + errorMsg.substring(colonIdx + 1, Math.min(errorMsg.length(), colonIdx + 150));
-                }
-              }
-              break;
-            }
-          }
-        } else if (errorOutput.contains("PERMISSION_DENIED") || errorOutput.contains("UNAUTHENTICATED")) {
-          errorMsg = "Permission denied or authentication failed";
-        } else if (errorOutput.contains("NOT_FOUND")) {
-          errorMsg = "Model or resource not found";
-        } else if (errorOutput.contains("RESOURCE_EXHAUSTED")) {
-          errorMsg = "Quota exceeded or resource exhausted";
-        } else if (errorOutput.contains("INVALID_ARGUMENT")) {
-          errorMsg = "Invalid argument in request";
-        } else if (!output.isEmpty()) {
-          errorMsg = output.trim();
-          if (errorMsg.length() > 150) {
-            errorMsg = errorMsg.substring(0, 150) + "...";
-          }
-        } else if (exitCode != 0) {
-          errorMsg = "Exit code: " + exitCode + " (no error details captured)";
-        }
+        String errorMsg = getString(errorOutput, output, exitCode);
 
         answer = errorMsg.replace("\"", "\"\"").replace("\n", " ").replace("\r", "").trim();
         logger.error("[FAIL] {} in {} - {}", modelAlias, region, errorMsg);
@@ -582,6 +551,56 @@ class VertexAiMasterMainTest {
     return passed;
   }
 
+  private static @NonNull String getString(String errorOutput, String output, int exitCode) {
+    String errorMsg = "Unknown error";
+
+    // Try to find specific error messages in stderr
+    if (errorOutput.contains("[ERROR]")) {
+      // Extract the first ERROR line
+      String[] lines = errorOutput.split("\\n");
+      for (String line : lines) {
+        if (line.contains("[ERROR]")) {
+          // Remove [ERROR] prefix and timestamp
+          errorMsg = line.replaceFirst(".*\\[ERROR]\\s*", "").trim();
+          break;
+        }
+      }
+    } else if (errorOutput.contains("Exception") || errorOutput.contains("Error")) {
+      // Look for exception messages
+      String[] lines = errorOutput.split("\\n");
+      for (String line : lines) {
+        if (line.contains("Exception") || (line.contains("Error") && !line.contains("[INFO]"))) {
+          errorMsg = line.trim();
+          // If line is too long, try to extract just the exception message
+          if (errorMsg.length() > 200) {
+            int colonIdx = errorMsg.indexOf(":");
+            if (colonIdx > 0 && colonIdx < errorMsg.length() - 1) {
+              errorMsg = errorMsg.substring(0, colonIdx + 1)
+                  + errorMsg.substring(colonIdx + 1, Math.min(errorMsg.length(), colonIdx + 150));
+            }
+          }
+          break;
+        }
+      }
+    } else if (errorOutput.contains("PERMISSION_DENIED") || errorOutput.contains("UNAUTHENTICATED")) {
+      errorMsg = "Permission denied or authentication failed";
+    } else if (errorOutput.contains("NOT_FOUND")) {
+      errorMsg = "Model or resource not found";
+    } else if (errorOutput.contains("RESOURCE_EXHAUSTED")) {
+      errorMsg = "Quota exceeded or resource exhausted";
+    } else if (errorOutput.contains("INVALID_ARGUMENT")) {
+      errorMsg = "Invalid argument in request";
+    } else if (!output.isEmpty()) {
+      errorMsg = output.trim();
+      if (errorMsg.length() > 150) {
+        errorMsg = errorMsg.substring(0, 150) + "...";
+      }
+    } else if (exitCode != 0) {
+      errorMsg = "Exit code: " + exitCode + " (no error details captured)";
+    }
+    return errorMsg;
+  }
+
   /**
    * Gets all regions from all region lists in VertexAiServiceImpl
    */
@@ -592,7 +611,7 @@ class VertexAiMasterMainTest {
 
   @Test
   @EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
-  void shouldPassOneAtLeastforUS() throws IOException {
+  void shouldPassOneAtLeastForUS() throws IOException {
     // Given: Working Service Account key file path
     String workingKeyPath = TEST_SA_KEY_FILE;
     File workingKeyFile = new File(workingKeyPath);
@@ -609,15 +628,24 @@ class VertexAiMasterMainTest {
         "us-west3", "us-west4");
 
     // Create results directory if it doesn't exist
-    File resultsDir = new File("results");
-    if (!resultsDir.exists()) {
-      resultsDir.mkdirs();
+    Path resultsDirPath = Paths.get("results");
+    try {
+      Files.createDirectories(resultsDirPath);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create results directory: " + resultsDirPath, e);
     }
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     String csvFileName = "results/region-discovery_" + timestamp + ".csv";
-    File csvFile = new File(csvFileName);
+    Path csvFilePath = Paths.get(csvFileName);
+
+    // Ensure parent directory exists
+    try {
+      Files.createDirectories(csvFilePath.getParent());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create parent directory for CSV file: " + csvFilePath.getParent(), e);
+    }
 
     logger.info("Testing model '{}' across all US regions...", testModelAlias);
     logger.info("Results will be saved to: {}", csvFileName);
@@ -625,7 +653,7 @@ class VertexAiMasterMainTest {
     int successCount = 0;
     int failCount = 0;
 
-    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFilePath.toFile()))) {
       // CSV Header
       csvWriter.println("model-alias,region,status,response");
 
@@ -743,15 +771,24 @@ class VertexAiMasterMainTest {
         "us-west3", "us-west4");
 
     // Create results directory if it doesn't exist
-    File resultsDir = new File("results");
-    if (!resultsDir.exists()) {
-      resultsDir.mkdirs();
+    Path resultsDirPath = Paths.get("results");
+    try {
+      Files.createDirectories(resultsDirPath);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create results directory: " + resultsDirPath, e);
     }
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     String csvFileName = "results/deepseek-r1-region-discovery_" + timestamp + ".csv";
-    File csvFile = new File(csvFileName);
+    Path csvFilePath = Paths.get(csvFileName);
+
+    // Ensure parent directory exists
+    try {
+      Files.createDirectories(csvFilePath.getParent());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create parent directory for CSV file: " + csvFilePath.getParent(), e);
+    }
 
     logger.info("Testing DeepSeek R1 model '{}' across all US regions...", testModelAlias);
     logger.info("Results will be saved to: {}", csvFileName);
@@ -759,7 +796,7 @@ class VertexAiMasterMainTest {
     int successCount = 0;
     int failCount = 0;
 
-    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFilePath.toFile()))) {
       // CSV Header
       csvWriter.println("model-alias,region,city,status,response");
 
@@ -876,15 +913,24 @@ class VertexAiMasterMainTest {
     List<String> allRegions = service.getAllRegions();
 
     // Create results directory if it doesn't exist
-    File resultsDir = new File("results");
-    if (!resultsDir.exists()) {
-      resultsDir.mkdirs();
+    Path resultsDirPath = Paths.get("results");
+    try {
+      Files.createDirectories(resultsDirPath);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create results directory: " + resultsDirPath, e);
     }
 
     // Create CSV file with timestamp
     String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     String csvFileName = "results/minimax-region-discovery_" + timestamp + ".csv";
-    File csvFile = new File(csvFileName);
+    Path csvFilePath = Paths.get(csvFileName);
+
+    // Ensure parent directory exists
+    try {
+      Files.createDirectories(csvFilePath.getParent());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create parent directory for CSV file: " + csvFilePath.getParent(), e);
+    }
 
     logger.info("Testing MiniMax model '{}' across worldwide regions...", testModelAlias);
     logger.info("Results will be saved to: {}", csvFileName);
@@ -892,7 +938,7 @@ class VertexAiMasterMainTest {
     int successCount = 0;
     int failCount = 0;
 
-    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFile))) {
+    try (PrintWriter csvWriter = new PrintWriter(new FileWriter(csvFilePath.toFile()))) {
       // CSV Header
       csvWriter.println("model-alias,region,city,status,response");
 
