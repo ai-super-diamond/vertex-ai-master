@@ -59,14 +59,16 @@ deepseek-r1-region-discovery_*.csv
 region-discovery_*.csv
 
 ### Results Directory ###
-results/
 tools/talisman/talisman.exe
+
+### Security tools ###
 .talismanrc
 
 ### Runtime Results ###
-results/runtime-results-*.txt
+results/
 /bin/vertex.exe
 
 ### Docs - genai lib sourse code ###
 Docs/java-genai-main
 bin/instrument.dll
+nul
