@@ -1,0 +1,8 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.yourorg.UpgradeAllMavenDepsToLatestRelease
+displayName: Upgrade all Maven deps to latest release
+recipeList:
+  - org.openrewrite.maven.UpgradeDependencyVersion:
+      groupId: "*"
+      artifactId: "*"
+      newVersion: "latest.release"

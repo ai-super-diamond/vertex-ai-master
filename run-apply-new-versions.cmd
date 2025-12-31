@@ -1,0 +1,1 @@
+mvn -U rewrite:runNoFork "-Drewrite.configLocation=$PWD\rewrite.yml"
