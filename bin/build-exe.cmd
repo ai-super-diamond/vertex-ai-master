@@ -25,7 +25,7 @@ REM Change to project root and run Maven
 pushd "%PROJECT_ROOT%"
 
 echo Running Maven native build...
-d:\java\maven\bin\mvn -Pnative package
+d:\java\maven\bin\mvn -Pnative package -Djansi.passthrough=true -Dstyle.color=always -DskipTests=true --errors --update-snapshots -T 4
 
 REM Check if Maven succeeded
 if errorlevel 1 (

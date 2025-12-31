@@ -10,7 +10,6 @@ import com.jguru.vertexai.utils.PropertiesLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
@@ -118,37 +117,48 @@ public class VertexAiClient {
   }
 
   /**
-   * Gets the API routing flag for a model (e.g., "rawPredict"). Returns the value or null if not specified.
-   */
-  private String getModelApi(String modelName) {
-    for (Object key : modelProperties.keySet()) {
-      String keyStr = key.toString();
-      if (keyStr.endsWith(".api")) {
-        String modelAlias = keyStr.substring(0, keyStr.length() - 4);
-        String fullModelName = modelProperties.getProperty(modelAlias);
-        if (fullModelName != null && (fullModelName.equals(modelName) || modelAlias.equals(modelName))) {
-          return modelProperties.getProperty(keyStr);
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
    * Loads Google credentials based on authentication configuration.
    *
    * @return GoogleCredentials with cloud-platform scope, or null if ADC should be used
    * @throws IOException
    *           if explicit key file cannot be loaded
    */
-  private GoogleCredentials loadCredentials() throws IOException {
+  protected GoogleCredentials loadCredentials() throws IOException {
     if (authConfig.getType() == AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY) {
+      String keyFilePath = authConfig.getSaKeyFile();
+
+      // Validate file path
+      if (keyFilePath == null || keyFilePath.isBlank()) {
+        throw new IllegalArgumentException("Service account key file path cannot be null or empty");
+      }
+
+      // Validate file exists and is readable
+      java.nio.file.Path keyFile = java.nio.file.Paths.get(keyFilePath);
+      if (!java.nio.file.Files.exists(keyFile)) {
+        throw new IOException("Service account key file does not exist: " + keyFilePath);
+      }
+
+      if (!java.nio.file.Files.isReadable(keyFile)) {
+        throw new IOException("Service account key file is not readable: " + keyFilePath);
+      }
+
+      // Additional security: Check file size (reasonable limits for JSON key files)
       try {
-        return GoogleCredentials.fromStream(new FileInputStream(authConfig.getSaKeyFile()))
+        long fileSize = java.nio.file.Files.size(keyFile);
+        if (fileSize > 100 * 1024) { // 100KB limit
+          throw new IOException("Service account key file appears to be too large: " + keyFilePath);
+        }
+      } catch (java.io.IOException e) {
+        logger.warn("Could not determine file size for validation: {}", keyFilePath, e);
+      }
+
+      try {
+        return GoogleCredentials.fromStream(java.nio.file.Files.newInputStream(keyFile))
             .createScoped("https://www.googleapis.com/auth/cloud-platform");
       } catch (IOException e) {
-        throw new IOException("Failed to load service account key from: " + authConfig.getSaKeyFile()
-            + ". The file must be a valid JSON service account key. ADC fallback is disabled when --sa-key-file is specified.", e);
+        throw new IOException(
+            "Failed to load service account key. The file must be a valid JSON service account key. ADC fallback is disabled when --sa-key-file is specified.",
+            e);
       }
     }
     return null;
@@ -180,16 +190,37 @@ public class VertexAiClient {
    * @return Configured Client instance
    */
   private Client buildVertexAiClient(GoogleCredentials credentials, String effectiveLocation) {
-    System.setProperty("GOOGLE_GENAI_USE_VERTEXAI", "true");
-    System.setProperty("GOOGLE_CLOUD_PROJECT", authConfig.getProjectId());
-    System.setProperty("GOOGLE_CLOUD_LOCATION", effectiveLocation);
+    // Handle "global" location properly
+    String clientLocation = effectiveLocation;
+    if (effectiveLocation != null && effectiveLocation.equalsIgnoreCase("global")) {
+      // For global location, we need to use the global endpoint
+      clientLocation = "global";
+    }
+
+    // Validate required parameters
+    String projectId = authConfig.getProjectId();
+
+    // If project ID is not provided, try to extract it from credentials if available
+    if ((projectId == null || projectId.isBlank()) && credentials instanceof com.google.auth.oauth2.ServiceAccountCredentials) {
+      projectId = ((com.google.auth.oauth2.ServiceAccountCredentials) credentials).getProjectId();
+      logger.debug("Extracted project ID from service account credentials: {}", projectId);
+    }
+
+    if (projectId == null || projectId.isBlank()) {
+      throw new IllegalStateException("Project ID is required for Vertex AI client. "
+          + "Please provide it via --project-id or ensure it's present in the service account key file.");
+    }
+
+    if (clientLocation == null || clientLocation.isBlank()) {
+      throw new IllegalStateException("Location is required for Vertex AI client");
+    }
+
+    Client.Builder clientBuilder = Client.builder().project(projectId).location(clientLocation).vertexAI(true);
 
     if (credentials != null) {
-      return Client.builder().project(authConfig.getProjectId()).location(effectiveLocation).credentials(credentials).vertexAI(true)
-          .build();
+      return clientBuilder.credentials(credentials).build();
     } else {
-      System.setProperty("GOOGLE_APPLICATION_CREDENTIALS", "");
-      return Client.builder().project(authConfig.getProjectId()).location(effectiveLocation).vertexAI(true).build();
+      return clientBuilder.build();
     }
   }
 
@@ -221,9 +252,6 @@ public class VertexAiClient {
 
       // Resolve full model name early
       String fullModelName = modelProperties.getProperty(modelName, modelName);
-      // Check for rawPredict API routing
-      String apiFlag = getModelApi(fullModelName);
-      boolean useRawPredict = "rawPredict".equalsIgnoreCase(apiFlag);
 
       // Also check for explicit OpenAI flag as fallback
       if (!useChatCompletions) {
@@ -231,10 +259,7 @@ public class VertexAiClient {
         useChatCompletions = "true".equalsIgnoreCase(openAiFlag);
       }
 
-      if (useRawPredict) {
-        GenerationResult result = callRawPredictApi(fullModelName, text);
-        return result.getText();
-      } else if (useChatCompletions) {
+      if (useChatCompletions) {
         // Use Chat Completions API for MaaS models
         // If we have a providerPrefix from .provider property, use that
         // Otherwise, fall back to "openai" for models with .openai=true
@@ -262,14 +287,27 @@ public class VertexAiClient {
    *           If the API call fails
    */
   protected GenerationResult callStandardVertexAi(String modelName, String textPrompt) throws IOException {
-    GoogleCredentials credentials = loadCredentials();
-    String effectiveLocation = resolveEffectiveLocation(modelName);
+    try {
+      GoogleCredentials credentials = loadCredentials();
+      String effectiveLocation = resolveEffectiveLocation(modelName);
 
-    try (Client client = buildVertexAiClient(credentials, effectiveLocation)) {
-      logger.debug("Invoking Vertex AI model '{}' with {} in project '{}' / location '{}'", modelName,
-          credentials != null ? "explicit credentials" : "ADC", authConfig.getProjectId(), effectiveLocation);
-      GenerateContentResponse response = client.models.generateContent(modelName, textPrompt, null);
-      return GenerationResult.builder().withText(response.text()).build();
+      try (Client client = buildVertexAiClient(credentials, effectiveLocation)) {
+        logger.debug("Invoking Vertex AI model '{}' with {} in project '{}' / location '{}'", modelName,
+            credentials != null ? "explicit credentials" : "ADC", authConfig.getProjectId(), effectiveLocation);
+        GenerateContentResponse response = client.models.generateContent(modelName, textPrompt, null);
+        return GenerationResult.builder().withText(response.text()).build();
+      }
+    } catch (Exception e) {
+      // Provide helpful error hints for common errors
+      String errorMessage = e.getMessage();
+      if (errorMessage != null) {
+        if (errorMessage.contains("404") || errorMessage.contains("not found")) {
+          errorMessage += " (Hint: Model may not be enabled in your GCP project. Check the model card and click 'Enable'.)";
+        } else if (errorMessage.contains("403") || errorMessage.contains("permission denied")) {
+          errorMessage += " (Hint: Check that your credentials have been granted the necessary IAM permissions for Vertex AI.)";
+        }
+      }
+      throw new IOException(errorMessage, e);
     }
   }
 
@@ -308,32 +346,21 @@ public class VertexAiClient {
       logger.info("Model name with provider: {}", modelWithPrefix);
     }
 
-    String response = chatClient.generateContent(modelWithPrefix, textPrompt);
-    return GenerationResult.builder().withText(response).build();
-  }
-
-  /**
-   * Calls the rawPredict API endpoint for models configured with .api=rawPredict.
-   *
-   * @param fullModelName
-   *          The full model name (e.g., "mistralai/codestral-2@001")
-   * @param textPrompt
-   *          The prompt text
-   * @return GenerationResult containing the response
-   * @throws IOException
-   *           If the API call fails
-   */
-  protected GenerationResult callRawPredictApi(String fullModelName, String textPrompt) throws IOException {
-    GoogleCredentials credentials = loadCredentials();
-
-    if (credentials == null) {
-      credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
+    try {
+      String response = chatClient.generateContent(modelWithPrefix, textPrompt);
+      return GenerationResult.builder().withText(response).build();
+    } catch (IOException e) {
+      // Provide helpful error hints for common errors
+      String errorMessage = e.getMessage();
+      if (errorMessage != null) {
+        if (errorMessage.contains("404") || errorMessage.contains("not found")) {
+          errorMessage += " (Hint: Model may not be enabled in your GCP project. Check the model card and click 'Enable'.)";
+        } else if (errorMessage.contains("403") || errorMessage.contains("permission denied")) {
+          errorMessage += " (Hint: Check that your credentials have been granted necessary IAM permissions for Vertex AI.)";
+        }
+      }
+      throw new IOException(errorMessage, e);
     }
-
-    String effectiveLocation = resolveEffectiveLocation(fullModelName);
-
-    RawPredictClient rpc = new RawPredictClient(authConfig.getProjectId(), effectiveLocation, credentials);
-    String response = rpc.rawPredict(fullModelName, textPrompt, 0);
-    return GenerationResult.builder().withText(response).build();
   }
+
 }

@@ -28,7 +28,7 @@ if not exist "target\vertex-0.0.1-SNAPSHOT.jar" (
   d:\java\maven\bin\mvn.cmd clean package -DskipTests
 )
 
-java -jar target\vertex-0.0.1-SNAPSHOT.jar --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%" --debug
+java -jar ..target\vertex-0.0.1-SNAPSHOT.jar --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%" --debug
 
 echo.
 echo ========================================

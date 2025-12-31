@@ -2,313 +2,180 @@
 
 A command-line interface (CLI) for interacting with Google's Vertex AI generative models, built with Java, Picocli, and a clean layered architecture.
 
-## Architecture Overview
+## 🚀 Overview
 
-The application follows a **3-tier layered architecture** for maintainability and testability:
-
-1. **Presentation Layer (CLI):** `VertexAiMasterMain` - Picocli-based command-line interface handling user input
-2. **Service Layer:** `VertexAiService` / `VertexAiServiceImpl` - Business logic, model resolution, region management
-3. **Client Layer:** `VertexAiClient` - Direct API communication with Google Cloud (Vertex AI SDK & Chat Completions API)
-4. **Data Transfer Objects (DTOs):** Request/response objects with Builder pattern for flexible construction
+Vertex AI Master CLI provides a powerful interface to experiment with and test various LLMs hosted on Google Cloud Vertex AI. It supports both the standard Vertex AI SDK (for Gemini/Llama) and the Chat Completions API for Model-as-a-Service (MaaS) offerings like DeepSeek and Qwen.
 
 **Key Features:**
-- Dual API support: Standard Vertex AI SDK for Gemini/Llama models, Chat Completions API for MaaS models (DeepSeek, Qwen, etc.)
-- Automatic model routing based on configuration
-- Region availability testing across 42 global GCP regions
-- Model alias system via `models.properties`
-- Three authentication modes: API Key, Service Account with explicit key, Application Default Credentials
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed and configured:
-
-1.  **Java Development Kit (JDK) 25:** This project requires Java 25. You can verify your installation by running `java -version`.
-2.  **Apache Maven:** Used for project build and dependency management. Verify your installation with `mvn -v`.
-3.  **Google Cloud SDK (gcloud):** While not strictly required to run the final executable, it is essential for managing your Google Cloud project and authentication. [Installation Guide](https://cloud.google.com/sdk/docs/install).
-4.  **Google Cloud Project:** You need a Google Cloud project with the Vertex AI API enabled.
-5.  **Service Account Key:**
-    *   Create a service account in your Google Cloud project with the "Vertex AI User" role.
-    *   Download the JSON key file for this service account.
-6.  **GraalVM (for native executable):** To build the native Windows executable, you need GraalVM for JDK 25.
-    *   [Download GraalVM](https://www.graalvm.org/downloads/).
-    *   Set the `GRAALVM_HOME` environment variable to your GraalVM installation directory.
-    *   Ensure the GraalVM `bin` directory is in your system's `PATH`.
-
-## Quality Checklist
-
-Run the following steps before sending code for review or publishing a release:
-
-1. `mvn spotless:apply` – auto-format Java sources and tidy the `pom.xml`.
-2. `mvn verify` – compile the project and execute the full JUnit suite.
-3. `mvn -Pspotbugs verify` – optional static analysis run. Requires a SpotBugs-compatible JDK (21 or 22); with newer preview JDKs SpotBugs may fail to parse standard library classes.
-
-The CLI also emits DEBUG-level diagnostics for model routing and credential usage when `logger` configuration enables the debug level, which helps triage misconfiguration quickly.
-
-## Model Context Protocol (MCP)
-
-### Local MCP configuration
-- Current MCP config file path: `c:\java\mcp-configs\qoder-mcp.json`
-- Once MCP is wired into the CLI, point the client to this file using a future `--mcp-config` flag or an environment variable like `MCP_CONFIG`.
-
-Examples (planned):
-- Using a CLI flag: `vertex-ai --mcp-config c:\\java\\mcp-configs\\qoder-mcp.json "Your prompt here"`
-- Using an env var: `set MCP_CONFIG=c:\\java\\mcp-configs\\qoder-mcp.json && vertex-ai "Your prompt here"`
-
-* when you need up-to-date information use MCP: **serper**
-* when you need documentation use MCP: **context7**
-* for sophisticated answers use MCP: **exa**
-* for complex tasks use MCP: **sequential-thinking**
-
-IMPORTANT: Test the tools of MCP servers and create your own rubric how and when to use and which one to use.
-
-## Configuration
-
-### Service Account
-
-The application requires credentials to authenticate with the Google Cloud API. You will need to pass the path to your service account JSON key file using the `--sa-key-file` option when running the application.
-
-**Important:** When `--sa-key-file` is explicitly provided, the application will **NOT** fall back to Application Default Credentials (ADC) if the key file is invalid or malformed. The application will fail immediately with a clear error message. This ensures explicit credential validation and prevents unintended authentication via ADC.
-
-### Authentication Types
-
-The application supports three authentication modes (defined in `AuthenticationType` enum):
-
-1. **API_KEY:** Direct Gemini API access using `--api-key`
-2. **SERVICE_ACCOUNT_EXPLICIT_KEY:** Vertex AI access with explicit JSON key file using `--sa-key-file`
-3. **SERVICE_ACCOUNT_ADC:** Vertex AI access using Application Default Credentials (fallback when no explicit key provided)
-
-### Model Configuration
-
-Available models are configured in `src/main/resources/models.properties`. The file contains:
-
-- **Model aliases:** Short names that resolve to full model IDs (e.g., `gemini.pro=gemini-2.5-pro`)
-- **Regional configuration:** Each model has a `.region` property specifying deployment location
-- **Provider prefixes:** MaaS models have a `.provider` property for Chat Completions API routing
-
-**Example entries:**
-```properties
-# Standard Vertex AI model
-gemini.pro=gemini-2.5-pro
-gemini.pro.region=us-central1
-
-# MaaS model (requires Chat Completions API)
-deepseek.r1.0528=deepseek-r1-0528-maas
-deepseek.r1.0528.region=us-central1
-deepseek.r1.0528.provider=deepseek-ai
-```
-
-**Supported models (as of latest):**
-- Gemini: 2.5 Pro, 2.5 Flash, 2.0 Flash Lite
-- Llama: 3.1 (405B, 70B), 3.3 70B, 4 Maverick, 4 Scout
-- DeepSeek: R1
-- Qwen: Qwen3 235B, Qwen3 Coder 480B
-- OpenAI: GPT OSS 120B
-
-## Building and Running
-
-### Running as a Java Application
-
-You can run the application directly using Maven. This is useful for development and testing.
-
-```sh
-# Example command
-mvn exec:java -Dexec.mainClass="com.example.demo.VertexAiMasterMain" -Dexec.args="--sa-key-file /path/to/your/key.json --model-key gemini.pro"
-```
-
-### Building the Native Executable (Windows)
-
-A native executable offers faster startup times and can be run without a JVM.
-
-1.  Ensure you have met all the prerequisites, especially GraalVM.
-2.  Run the `build-exe.cmd` script from the `bin/` directory:
-
-```sh
-.\bin\build-exe.cmd
-```
-
-This script will compile the application into a native executable named `vertex.exe` and place it in the `bin/` directory.
-
-## Usage
-
-Once you have the `vertex.exe` executable (or JAR file), you can run it from your command line.
-
-### Basic Content Generation
-
-**Using Service Account with explicit key:**
-```sh
-# Basic usage with model alias
-./bin/vertex.exe --project-id vertex-ai-project-skorec --location us-central1 --sa-key-file "C:\path\to\key.json" --model-name gemini.pro "What is the capital of France?"
-
-# Short flags
-./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -m gemini.flash "Explain quantum computing"
-```
-
-**Using API Key (Gemini API):**
-```sh
-./bin/vertex.exe --api-key YOUR_API_KEY --model-name gemini.pro "Write a haiku about AI"
-```
-
-**Using Application Default Credentials:**
-```sh
-# Ensure GOOGLE_APPLICATION_CREDENTIALS is set in environment
-./bin/vertex.exe --project-id PROJECT --location us-central1 -m gemini.pro "Hello world"
-```
-
-### Model Selection
-
-Use model aliases from `models.properties` or full model names:
-
-```sh
-# Using alias
-./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m gemini.flash "Your prompt"
-
-# Using full model name
-./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m gemini-2.5-flash "Your prompt"
-
-# MaaS models (auto-routed to Chat Completions API)
-./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-central1 -m deepseek.r1.0528 "200+200*99=?"
-./bin/vertex.exe --sa-key-file key.json --project-id PROJECT --location us-south1 -m qwen3.coder.480b.a35b "Write quicksort in Python"
-```
-
-### Region Availability Check
-
-Test model availability across all regions in a geographic cluster:
-
-```sh
-# Check DeepSeek R1 in all US regions
-./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --check-all-regions --cluster US --model-name deepseek.r1.0528 "Test prompt"
-
-# Short flags - check Qwen in EU regions
-./bin/vertex.exe --project-id PROJECT --location eu --sa-key-file key.json -car -c EU -m qwen3.coder.480b.a35b "Test"
-
-# Available clusters: US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA
-```
-
-### Worldwide Region Availability Check
-
-Test model availability across all worldwide regions (42 GCP regions):
-
-```sh
-# Check Gemini Pro availability worldwide
-./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json --worldwide --model-name gemini.pro "Test prompt"
-
-# Short flags
-./bin/vertex.exe --project-id PROJECT --location us-central1 --sa-key-file key.json -w -m gemini.flash "Test"
-```
-
-**Worldwide check output:**
-```
-=== Worldwide Region Availability Check ===
-Model: gemini.pro
-Test prompt: 200+200*99=?
-
-Testing...
-
-=== Results ===
-✓ us-central1: SUCCESS
-✓ us-east1: SUCCESS
-✗ us-west1: 404 Not Found
-...
-
-=== Summary ===
-Total: 42
-Success: 15
-Failed: 27
-```
-
-## Command-Line Options
-
-### Authentication (mutually exclusive groups)
-
-**API Key authentication:**
-- `--api-key KEY` - Your Gemini API key
-
-**Service Account authentication:**
-- `--project-id PROJECT` - Google Cloud project ID (required)
-- `--location REGION` - GCP region (e.g., us-central1) (required)
-- `--sa-key-file PATH` - Path to service account JSON key file (optional, uses ADC if omitted)
-
-### Model Selection
-
-- `--model-name MODEL`, `-m MODEL` - Model alias or full name (default: gemini-1.5-pro-001)
-
-### Prompt Input
-
-- `TEXT` - Positional argument for prompt text
-- `--text TEXT`, `-t TEXT` - Named option for prompt text
-
-### Region Check Mode
-
-- `--check-all-regions`, `-car` - Enable region availability testing
-- `--cluster NAME`, `-c NAME` - Geographic cluster to test (US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA)
-
-### Worldwide Region Check Mode
-
-- `--worldwide`, `-w` - Enable worldwide region availability testing across all 42 GCP regions
-
-### General Options
-
-- `--help`, `-h` - Show help message
-- `--version`, `-V` - Show version information
-
-## Development
-
-### Project Structure
-
-```
-src/main/java/com/jguru/vertexai/
-├── VertexAiMasterMain.java          # CLI entry point
-├── client/
-│   ├── VertexAiClient.java          # API client with routing logic
-│   ├── ChatCompletionsClient.java   # MaaS Chat Completions API client
-│   └── WorldwideAvailabilityClient.java # Worldwide region testing client
-├── service/
-│   ├── VertexAiService.java         # Service interface
-│   ├── VertexAiServiceImpl.java     # Business logic implementation
-│   └── dto/
-│       ├── AuthenticationConfig.java
-│       ├── AuthenticationType.java
-│       ├── GenerationRequest.java
-│       ├── GenerationResult.java
-│       ├── RegionCheckRequest.java
-│       └── RegionCheckResult.java
-└── utils/
-    └── VertexUtils.java             # Utility methods
-
-src/main/resources/
-└── models.properties                # Model configuration
-
-src/test/java/com/jguru/vertexai/
-├── VertexAiMasterMainTest.java     # Integration tests
-└── client/
-    └── WorldwideAvailabilityClientTest.java # Unit tests for worldwide client
-```
-
-### Running Tests
-
-```sh
-# Run all unit tests
-d:\java\maven\bin\mvn.cmd test
-
-# Run integration tests (requires service account key)
-d:\java\maven\bin\mvn.cmd test "-Drun.integration.tests=true"
-```
+- **Dual API Support:** Seamlessly switches between Vertex AI SDK and Chat Completions API.
+- **Region Availability Testing:** Check model availability across 40+ GCP regions or specific clusters (US, EU, etc.).
+- **Model Alias System:** Define short names for complex model IDs in `models.properties`.
+- **Flexible Authentication:** Supports API Key, Service Account JSON, and Application Default Credentials (ADC).
+- **Native Executable:** Built with GraalVM for near-instant startup on Windows.
+
+## 🛠️ Tech Stack
+
+- **Language:** Java 25
+- **Framework:** [Picocli](https://picocli.info/) for CLI parsing
+- **SDKs:** Google Cloud GenAI SDK, Google Auth Library
+- **Build System:** Maven 3.9+
+- **Native Image:** GraalVM (for `vertex.exe`)
+- **Logging:** SLF4J + Logback
+
+## 📋 Prerequisites
+
+- **Java Development Kit (JDK) 25:** Ensure `java -version` shows version 25.
+- **Apache Maven 3.9+:** For building the project.
+- **Google Cloud Project:** A project with the Vertex AI API enabled.
+- **GraalVM (Optional):** Required only if you want to build the native Windows executable (`vertex.exe`).
+- **Google Cloud SDK (gcloud):** Recommended for managing credentials.
+
+## 🚀 Setup and Installation
 
 ### Building from Source
 
 ```sh
-# Compile
-d:\java\maven\bin\mvn.cmd clean compile
+# Clone the repository
+git clone <repo-url>
+cd vertex-ai-master
 
-# Package JAR
-d:\java\maven\bin\mvn.cmd clean package
-
-# Run JAR directly
-java -jar target/demo-0.0.1-SNAPSHOT.jar --help
+# Build the JAR
+mvn clean package
 ```
 
-## Documentation
+### Building the Native Executable (Windows)
 
-For detailed development guidelines and architecture information, see:
-- [`docs/AGENTS.md`](docs/AGENTS.md) - Instructions for AI coding agents
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - Detailed architecture documentation
+Ensure `GRAALVM_HOME` is set and points to your GraalVM installation.
+
+```powershell
+.\bin\build-exe.cmd
+```
+
+This generates `bin\vertex.exe`.
+
+## 💻 Usage
+
+### Basic Usage
+
+```powershell
+# Using the native executable
+.\bin\vertex.exe --project-id YOUR_PROJECT --location us-central1 -m gemini.pro "What is the capital of France?"
+
+# Using Maven (Development)
+mvn exec:java -Dexec.mainClass="com.jguru.vertexai.VertexAiMasterMain" -Dexec.args="--project-id YOUR_PROJECT --location us-central1 -m gemini.pro 'Hello World'"
+```
+
+### Authentication Modes
+
+1.  **API Key (Gemini API):**
+    ```sh
+    .\bin\vertex.exe --api-key YOUR_API_KEY -m gemini.pro "Tell me a joke"
+    ```
+2.  **Service Account Key:**
+    ```sh
+    .\bin\vertex.exe --project-id PROJECT --location us-central1 --sa-key-file path/to/key.json -m gemini.pro "Prompt"
+    ```
+3.  **Application Default Credentials (ADC):**
+    ```sh
+    # Ensure GOOGLE_APPLICATION_CREDENTIALS is set
+    .\bin\vertex.exe --project-id PROJECT --location us-central1 -m gemini.pro "Prompt"
+    ```
+
+### Availability Checks
+
+**Cluster-wide Check:**
+```sh
+.\bin\vertex.exe --project-id PROJECT --sa-key-file key.json --check-all-regions --cluster US -m deepseek.r1.0528 "Test"
+```
+
+**Worldwide Check:**
+```sh
+.\bin\vertex.exe --project-id PROJECT --sa-key-file key.json --worldwide -m gemini.pro "Test"
+```
+
+## 📜 Scripts
+
+| Script | Description |
+| :--- | :--- |
+| `rebuild.cmd` | Cleans, builds the JAR, and runs a smoke test. |
+| `bin\build-exe.cmd` | Compiles the application into a native Windows executable using GraalVM. |
+| `bin\vert.cmd` | A wrapper to run the JAR with a local `models.properties` configuration. |
+| `bin\test-all-us.cmd` | Batch script to test model availability across US regions. |
+| `bin\test-all-eu.cmd` | Batch script to test model availability across EU regions. |
+| `run-dry-new-versions.cmd` | OpenRewrite dry run to check for dependency updates. |
+| `run-apply-new-versions.cmd` | OpenRewrite run to apply dependency updates. |
+
+## ⚙️ Configuration
+
+### `models.properties`
+
+Located in `src/main/resources/models.properties`. It defines model aliases and their routing:
+
+```properties
+# Standard model
+gemini.pro=gemini-1.5-pro-001
+gemini.pro.region=us-central1
+
+# MaaS model
+deepseek.r1.0528=deepseek-r1-0528-maas
+deepseek.r1.0528.provider=deepseek-ai
+```
+
+## 🌐 Environment Variables
+
+| Variable | Purpose |
+| :--- | :--- |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to your GCP Service Account JSON key (used by ADC). |
+| `GRAALVM_HOME` | Path to GraalVM installation directory (required for native build). |
+| `JAVA_HOME` | Path to JDK 25 installation. |
+
+## 🧪 Testing
+
+```sh
+# Run unit tests
+mvn test
+
+# Run integration tests (may require credentials)
+mvn verify
+```
+
+Quality checks:
+- `mvn spotless:check`: Verify code formatting.
+- `mvn spotless:apply`: Auto-format code.
+
+## 📂 Project Structure
+
+```text
+├── bin/                    # Compiled executables and helper scripts
+├── docs/                   # Additional documentation (Architecture, MCP, etc.)
+├── keys/                   # (Optional) Local storage for service account keys
+├── src/
+│   ├── main/
+│   │   ├── java/           # Layered architecture (Client, Service, DTO, Utils)
+│   │   └── resources/      # models.properties and logging config
+│   └── test/               # JUnit 5 test suite
+├── pom.xml                 # Maven project configuration
+└── rebuild.cmd             # Master rebuild script
+```
+
+## 🏛️ Architecture Overview
+
+The application follows a **3-tier layered architecture**:
+
+1.  **Presentation Layer (CLI):** `VertexAiMasterMain` - Picocli-based CLI handling user input.
+2.  **Service Layer:** `VertexAiService` - Business logic, model resolution, and region management.
+3.  **Client Layer:** `VertexAiClient` - Direct API communication (SDK or Chat Completions).
+4.  **DTOs:** Data Transfer Objects for clean communication between layers.
+
+## 🤖 Model Context Protocol (MCP)
+
+This tool is designed to work with MCP-compatible clients.
+- Current MCP config path: `c:\java\mcp-configs\qoder-mcp.json`
+- Planned support for `--mcp-config` flag.
+
+## 📄 License
+
+TODO: Add license information (e.g., Apache 2.0 or MIT).
+
+---
+*Last updated: 2025-12-24*

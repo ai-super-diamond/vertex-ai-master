@@ -40,7 +40,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
   }
 
   static class ServiceAccountAuth {
-    @Option(names = "--project-id", description = "Your Google Cloud project ID.", required = true)
+    @Option(names = "--project-id", description = "Your Google Cloud project ID.")
     String projectId;
 
     @Option(names = "--location", description = "The Google Cloud location (e.g., us-central1). Optional for --check-all-regions and --worldwide modes.")

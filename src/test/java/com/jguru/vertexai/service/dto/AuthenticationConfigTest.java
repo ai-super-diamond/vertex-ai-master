@@ -29,9 +29,12 @@ class AuthenticationConfigTest {
   }
 
   @Test
-  void shouldRequireAllFieldsForExplicitKey() {
+  void shouldRequireSaKeyFileAndLocationForExplicitKey() {
     assertThatThrownBy(() -> AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY).build())
         .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("saKeyFile");
+
+    assertThatThrownBy(() -> AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withSaKeyFile("path/to/key.json").build()).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("location");
   }
 
   @Test
@@ -46,5 +49,9 @@ class AuthenticationConfigTest {
     AuthenticationConfig explicitConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
         .withProjectId("project").withLocation("region").withSaKeyFile("path/to/key.json").build();
     assertThat(explicitConfig.getSaKeyFile()).isEqualTo("path/to/key.json");
+
+    AuthenticationConfig explicitNoProjectConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
+        .withLocation("region").withSaKeyFile("path/to/key.json").build();
+    assertThat(explicitNoProjectConfig.getProjectId()).isNull();
   }
 }

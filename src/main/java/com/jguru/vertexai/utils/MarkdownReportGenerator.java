@@ -118,7 +118,7 @@ public class MarkdownReportGenerator {
 
       String fullName = modelProps.getProperty(alias, "N/A");
       String provider = modelProps.getProperty(alias + ".provider", "native");
-      String region = modelProps.getProperty(alias + ".region", "us-central1");
+      String region = buildSuccessfulRegions(result.regionResults);
       String apiType = determineApiType(modelProps, alias);
       String status = result.successCount > 0 ? "✅" : "❌";
       String successfulUrls = buildSuccessfulUrls(apiType, result.regionResults, projectId);
@@ -146,6 +146,21 @@ public class MarkdownReportGenerator {
     return "Vertex AI SDK";
   }
 
+  private static String buildSuccessfulRegions(Map<String, String> regionResults) {
+    StringBuilder regions = new StringBuilder();
+    for (Map.Entry<String, String> entry : regionResults.entrySet()) {
+      if ("SUCCESS".equals(entry.getValue())) {
+        String region = entry.getKey();
+        if (regions.length() > 0) {
+          regions.append(", ");
+        }
+        regions.append(region);
+      }
+    }
+
+    return regions.length() > 0 ? regions.toString() : "None";
+  }
+
   private static String buildSuccessfulUrls(String apiType, Map<String, String> regionResults, String projectId) {
     if (!"Chat Completions".equals(apiType)) {
       return "N/A";
@@ -156,7 +171,10 @@ public class MarkdownReportGenerator {
       if ("SUCCESS".equals(entry.getValue())) {
         String region = entry.getKey();
         String host = "global".equals(region) ? "aiplatform.googleapis.com" : region + "-aiplatform.googleapis.com";
-        String url = String.format("https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host, projectId, region);
+        // Sanitize project ID for security
+        String sanitizedProjectId = sanitizeProjectId(projectId);
+        String url = String.format("https://%s/v1/projects/%s/locations/%s/endpoints/openapi/chat/completions", host, sanitizedProjectId,
+            region);
         if (urls.length() > 0) {
           urls.append(", ");
         }
@@ -165,6 +183,24 @@ public class MarkdownReportGenerator {
     }
 
     return urls.length() > 0 ? urls.toString() : "None";
+  }
+
+  /**
+   * Sanitizes project ID for security by masking sensitive parts while maintaining readability for debugging.
+   *
+   * @param projectId
+   *          The original project ID
+   * @return Sanitized project ID with middle characters masked if longer than 6 chars
+   */
+  private static String sanitizeProjectId(String projectId) {
+    if (projectId == null || projectId.length() <= 6) {
+      return projectId;
+    }
+
+    // For debugging purposes, show first 3 and last 3 characters
+    String prefix = projectId.substring(0, Math.min(3, projectId.length()));
+    String suffix = projectId.substring(Math.max(0, projectId.length() - 3));
+    return prefix + "..." + suffix;
   }
 
   private static void writeFooter(PrintWriter writer) {

@@ -85,7 +85,7 @@ public class AuthenticationConfig {
           break;
         case SERVICE_ACCOUNT_EXPLICIT_KEY :
           requireNonBlank(saKeyFile, "saKeyFile");
-          requireNonBlank(projectId, "projectId");
+          // projectId is optional if it can be extracted from saKeyFile
           requireNonBlank(location, "location");
           break;
         default :

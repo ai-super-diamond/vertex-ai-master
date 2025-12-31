@@ -2,11 +2,10 @@
 
 ## Overview
 
-Vertex AI Master CLI is a command-line interface tool that provides unified access to Google's Vertex AI generative models and third-party MaaS (Models as a Service) through a clean, layered architecture. The application supports **triple API integration**, allowing it to work with:
+Vertex AI Master CLI is a command-line interface tool that provides unified access to Google's Vertex AI generative models and third-party MaaS (Models as a Service) through a clean, layered architecture. The application supports **dual API integration**, allowing it to work with:
 
 1. **Google's native Vertex AI SDK** for Gemini, Llama, and other Google models
 2. **OpenAI‑compatible Chat Completions API** for MaaS models (DeepSeek, Qwen, MiniMax, OpenAI)
-3. **Raw Predict API** for models requiring direct HTTP calls (e.g., Mistral AI)
 
 The CLI also provides comprehensive region‑availability testing across all GCP regions, detailed error classification, and automated Markdown reporting.
 
@@ -18,21 +17,17 @@ graph TB
     B --> C[Client Layer<br/>VertexAiClient]
     B --> D[Client Layer<br/>ChatCompletionsClient]
     B --> E[Client Layer<br/>WorldwideAvailabilityClient]
-    B --> F[Client Layer<br/>RawPredictClient]
     C --> G[Google Vertex AI SDK]
     D --> H[HTTP Client<br/>OpenAI‑compatible API]
-    F --> I[HTTP Client<br/>rawPredict endpoint]
     E --> B
     J[Configuration<br/>models.properties] -.-> A
     J -.-> B
     J -.-> C
     J -.-> D
-    J -.-> F
     K[Authentication<br/>Service Account<br/>API Key] -.-> A
     K -.-> B
     K -.-> C
     K -.-> D
-    K -.-> F
     L[Region Catalogue<br/>RegionCatalog] -.-> B
     L -.-> E
     M[Markdown Report Generator] -.-> A
@@ -76,10 +71,10 @@ graph TB
 - Provide debug‑mode error details with cause‑chain analysis
 
 ### 3. Client Layer
-**Primary Components**: [`VertexAiClient.java`](src/main/java/com/jguru/vertexai/client/VertexAiClient.java), [`ChatCompletionsClient.java`](src/main/java/com/jguru/vertexai/client/ChatCompletionsClient.java), [`RawPredictClient.java`](src/main/java/com/jguru/vertexai/client/RawPredictClient.java), [`WorldwideAvailabilityClient.java`](src/main/java/com/jguru/vertexai/client/WorldwideAvailabilityClient.java)
+**Primary Components**: [`VertexAiClient.java`](src/main/java/com/jguru/vertexai/client/VertexAiClient.java), [`ChatCompletionsClient.java`](src/main/java/com/jguru/vertexai/client/ChatCompletionsClient.java), [`WorldwideAvailabilityClient.java`](src/main/java/com/jguru/vertexai/client/WorldwideAvailabilityClient.java)
 
 - Direct API communication with external services
-- Implementation of triple‑API routing strategy
+- Implementation of dual‑API routing strategy
 - Authentication handling and credential management
 - HTTP request/response processing
 - Specific client implementations for different API types
@@ -96,12 +91,6 @@ graph TB
 - Handles API key authentication (Bearer token from Google credentials)
 - Supports third‑party models (DeepSeek, Qwen, MiniMax, OpenAI)
 - Implements provider‑specific configurations (provider prefix from `.provider`)
-
-#### RawPredictClient
-- Calls the `rawPredict` endpoint for models configured with `.api=rawPredict`
-- Currently supports Mistral AI models (`mistralai/…`)
-- Uses HTTP‑based authentication with Google credentials
-- Endpoint format: `https://{region}‑aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/publishers/mistralai/models/{model}:rawPredict`
 
 #### WorldwideAvailabilityClient
 - Specialized client for worldwide region testing
@@ -136,7 +125,6 @@ Located in `src/main/java/com/jguru/vertexai/service/dto/`
 - `model.alias = full-model-name` – maps alias to full model identifier
 - `model.alias.provider = deepseek‑ai` – routes to Chat Completions API with provider prefix
 - `model.alias.openai = true` – routes to Chat Completions API with provider "openai"
-- `model.alias.api = rawPredict` – routes to Raw Predict API
 - `model.alias.region = us‑central1` – overrides default location for this model
 - `US_REGIONS = us‑central1,us‑east1,…` – custom region list for cluster "US"
 
@@ -147,24 +135,19 @@ Located in `src/main/java/com/jguru/vertexai/service/dto/`
 - **Region Provider**: [`RegionProvider`](src/main/java/com/jguru/vertexai/service/RegionProvider.java) interface with [`RegionProviderImpl`](src/main/java/com/jguru/vertexai/service/RegionProviderImpl.java) implementation that first checks `regions.properties`, then falls back to `RegionCatalog`.
 - **Worldwide Testing**: [`WorldwideAvailabilityClient`](src/main/java/com/jguru/vertexai/client/WorldwideAvailabilityClient.java) iterates over all regions from `RegionCatalog.getAllRegions()`.
 
-## Triple‑API Routing Strategy
+## Dual‑API Routing Strategy
 
-The application implements a triple‑API routing strategy based on model configuration:
+The application implements a dual‑API routing strategy based on model configuration:
 
-1. **Standard Vertex AI SDK**: Used for models **without** `.provider` or `.openai` properties and **without** `.api=rawPredict`.
+1. **Standard Vertex AI SDK**: Used for models **without** `.provider` or `.openai` properties.
 2. **Chat Completions API**: Used for models **with** `.provider` property (e.g., `deepseek‑ai`) **or** `.openai=true` flag.
-3. **Raw Predict API**: Used for models **with** `.api=rawPredict` property (currently Mistral AI models).
 
-**Routing Logic** (implemented in [`VertexAiClient.callVertexAi()`](src/main/java/com/jguru/vertexai/client/VertexAiClient.java:207)):
+**Routing Logic** (implemented in [`VertexAiClient.callVertexAi()`](src/main/java/com/jguru/vertexai/client/VertexAiClient.java:238)):
 ```java
 String providerPrefix = getProviderPrefix(modelName);
 boolean useChatCompletions = providerPrefix != null;
-String apiFlag = getModelApi(fullModelName);
-boolean useRawPredict = "rawPredict".equalsIgnoreCase(apiFlag);
 
-if (useRawPredict) {
-    callRawPredictApi(fullModelName, text);
-} else if (useChatCompletions) {
+if (useChatCompletions) {
     callChatCompletionsApi(providerPrefix != null ? providerPrefix : "openai", fullModelName, text);
 } else {
     callStandardVertexAi(fullModelName, text);
@@ -252,7 +235,7 @@ The application follows a comprehensive testing strategy:
 3. **Region Clusters**: Add new geographic clusters for region testing (update `RegionCatalog` and `regions.properties`)
 4. **Output Formats**: Extend response formatting and serialization options (CSV, JSON, etc.)
 5. **CLI Options**: Add new command‑line parameters for additional functionality
-6. **New API Types**: Support additional API endpoints (e.g., `rawPredict` for other publishers) by extending `VertexAiClient` routing
+6. **New API Types**: Support additional API endpoints (e.g., new publisher-specific APIs) by extending `VertexAiClient` routing
 
 ## Performance Considerations
 

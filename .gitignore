@@ -66,3 +66,7 @@ tools/talisman/talisman.exe
 ### Runtime Results ###
 results/runtime-results-*.txt
 /bin/vertex.exe
+
+### Docs - genai lib sourse code ###
+Docs/java-genai-main
+bin/instrument.dll
