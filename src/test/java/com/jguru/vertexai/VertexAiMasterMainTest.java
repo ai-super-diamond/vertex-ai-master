@@ -24,7 +24,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import com.jguru.vertexai.service.RegionProvider;
+import com.jguru.vertexai.service.RegionProviderImpl;
 import com.jguru.vertexai.service.VertexAiServiceImpl;
+import com.jguru.vertexai.infrastructure.client.VertexAiClientFactory;
+import com.jguru.vertexai.utils.PropertiesLoader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -149,7 +153,8 @@ class VertexAiMasterMainTest {
     VertexAiMasterMain app = new VertexAiMasterMain();
     CommandLine cmd = new CommandLine(app);
 
-    // Parsing should not fail (execution will fail due to invalid key, but parsing succeeds)
+    // Parsing should not fail (execution will fail due to invalid key, but parsing
+    // succeeds)
     CommandLine.ParseResult parseResult = cmd.parseArgs(args);
 
     // Then: Parsing succeeds (location is optional)
@@ -166,7 +171,8 @@ class VertexAiMasterMainTest {
     VertexAiMasterMain app = new VertexAiMasterMain();
     CommandLine cmd = new CommandLine(app);
 
-    // Parsing should not fail (execution will fail due to invalid key, but parsing succeeds)
+    // Parsing should not fail (execution will fail due to invalid key, but parsing
+    // succeeds)
     CommandLine.ParseResult parseResult = cmd.parseArgs(args);
 
     // Then: Parsing succeeds (location is optional)
@@ -317,7 +323,8 @@ class VertexAiMasterMainTest {
       logger.info("=== Output (Expired Key Test) ===\n{}", output);
     }
 
-    // Verify error message indicates authentication/token failure (not ADC fallback)
+    // Verify error message indicates authentication/token failure (not ADC
+    // fallback)
     assertThat(errorOutput).as("Error output must indicate authentication/token failure (no ADC fallback)").containsAnyOf(
         "TokenResponseException", "invalid_grant", "401", "403", "expired", "unauthorized", "Permission", "denied", "access denied",
         "authentication", "credentials", "Failed to load service account key", "ADC fallback is disabled");
@@ -391,7 +398,8 @@ class VertexAiMasterMainTest {
       modelProps.load(input);
     }
 
-    // Extract all model aliases dynamically from properties (exclude .region, .provider, .openai, .api)
+    // Extract all model aliases dynamically from properties (exclude .region,
+    // .provider, .openai, .api)
     List<String> modelAliases = modelProps.keySet().stream().map(Object::toString)
         .filter(key -> !key.endsWith(".region") && !key.endsWith(".provider") && !key.endsWith(".openai") && !key.endsWith(".api")).sorted()
         .toList();
@@ -605,7 +613,10 @@ class VertexAiMasterMainTest {
    * Gets all regions from all region lists in VertexAiServiceImpl
    */
   private List<String> getAllRegions() {
-    VertexAiServiceImpl service = new VertexAiServiceImpl();
+    RegionProvider regionProvider = new RegionProviderImpl(
+        PropertiesLoader.load(LoggerFactory.getLogger(RegionProviderImpl.class), "regions.config", "regions.properties"));
+    VertexAiServiceImpl service = new VertexAiServiceImpl(regionProvider, new VertexAiClientFactory(),
+        PropertiesLoader.load(LoggerFactory.getLogger(VertexAiServiceImpl.class), "models.config", "models.properties"));
     return service.getAllRegions();
   }
 
@@ -909,7 +920,10 @@ class VertexAiMasterMainTest {
     String testPrompt = "200+200*99=?";
 
     // Build combined region list from service
-    VertexAiServiceImpl service = new VertexAiServiceImpl();
+    RegionProvider regionProvider = new RegionProviderImpl(
+        PropertiesLoader.load(LoggerFactory.getLogger(RegionProviderImpl.class), "regions.config", "regions.properties"));
+    VertexAiServiceImpl service = new VertexAiServiceImpl(regionProvider, new VertexAiClientFactory(),
+        PropertiesLoader.load(LoggerFactory.getLogger(VertexAiServiceImpl.class), "models.config", "models.properties"));
     List<String> allRegions = service.getAllRegions();
 
     // Create results directory if it doesn't exist

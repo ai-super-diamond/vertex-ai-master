@@ -1,12 +1,11 @@
 package com.jguru.vertexai.service;
 
 import com.jguru.vertexai.utils.PropertiesLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of RegionProvider that loads region data from configuration files.
@@ -15,15 +14,20 @@ public class RegionProviderImpl implements RegionProvider {
 
   private static final Logger logger = LoggerFactory.getLogger(RegionProviderImpl.class);
 
-  private Properties regionProperties = null;
+  private final Properties regionProperties;
+
+  public RegionProviderImpl() {
+    this(PropertiesLoader.load(LoggerFactory.getLogger(RegionProviderImpl.class), "regions.config", "regions.properties"));
+  }
+
+  public RegionProviderImpl(Properties regionProperties) {
+    this.regionProperties = regionProperties;
+  }
 
   /**
    * Loads region properties from external file or embedded resource.
    */
   private Properties getRegionProperties() {
-    if (regionProperties == null) {
-      regionProperties = PropertiesLoader.load(logger, "regions.config", "regions.properties");
-    }
     return regionProperties;
   }
 
@@ -71,7 +75,7 @@ public class RegionProviderImpl implements RegionProvider {
     List<String> allRegions = new ArrayList<>();
 
     // Try to get all regions from properties
-    String[] clusterKeys = {"US", "EUROPE", "ASIA", "MIDDLE_EAST", "AFRICA", "CANADA", "SOUTH_AMERICA"};
+    String[] clusterKeys = {"US", "EUROPE", "ASIA", "MIDDLE_EAST", "AFRICA", "CANADA", "SOUTH_AMERICA",};
 
     for (String clusterKey : clusterKeys) {
       String propertyKey = clusterKey + "_REGIONS";

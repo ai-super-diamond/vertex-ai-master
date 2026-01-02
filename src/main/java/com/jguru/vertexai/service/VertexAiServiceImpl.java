@@ -1,15 +1,11 @@
 package com.jguru.vertexai.service;
 
-import com.jguru.vertexai.client.VertexAiClient;
 import com.jguru.vertexai.service.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.ErrorType;
 import com.jguru.vertexai.service.dto.GenerationRequest;
 import com.jguru.vertexai.service.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
-import com.jguru.vertexai.utils.PropertiesLoader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of VertexAiService containing all business logic.
@@ -26,24 +24,19 @@ public class VertexAiServiceImpl implements VertexAiService {
   private static final Logger logger = LoggerFactory.getLogger(VertexAiServiceImpl.class);
 
   private final RegionProvider regionProvider;
+  private final ModelClientFactory modelClientFactory;
+  private final Properties modelProperties;
 
-  public VertexAiServiceImpl() {
-    this.regionProvider = new RegionProviderImpl();
-  }
-
-  public VertexAiServiceImpl(RegionProvider regionProvider) {
+  public VertexAiServiceImpl(RegionProvider regionProvider, ModelClientFactory modelClientFactory, Properties modelProperties) {
     this.regionProvider = regionProvider;
+    this.modelClientFactory = modelClientFactory;
+    this.modelProperties = modelProperties;
   }
-
-  private static Properties modelProperties = null;
 
   /**
    * Loads model properties from external file or embedded resource.
    */
   private Properties getModelProperties() {
-    if (modelProperties == null) {
-      modelProperties = PropertiesLoader.load(logger, "models.config", "models.properties");
-    }
     return modelProperties;
   }
 
@@ -69,7 +62,7 @@ public class VertexAiServiceImpl implements VertexAiService {
     String resolvedModel = resolveModelName(request.getModelName());
 
     try {
-      VertexAiClient client = new VertexAiClient(request.getAuthenticationConfig());
+      ModelClient client = modelClientFactory.createClient(request.getAuthenticationConfig());
       String response = client.callVertexAi(resolvedModel, request.getText());
       return GenerationResult.success(response);
     } catch (Exception e) {
@@ -93,7 +86,7 @@ public class VertexAiServiceImpl implements VertexAiService {
       try {
         AuthenticationConfig regionAuthConfig = buildRegionAuthenticationConfig(request.getAuthenticationConfig(), projectId, saKeyFile,
             region);
-        VertexAiClient client = new VertexAiClient(regionAuthConfig);
+        ModelClient client = modelClientFactory.createClient(regionAuthConfig);
         String response = client.callVertexAi(resolvedModel, prompt);
         if (response != null && !response.isEmpty()) {
           results.put(region, "SUCCESS");
@@ -160,7 +153,8 @@ public class VertexAiServiceImpl implements VertexAiService {
   private String buildDebugError(String base, Exception e) {
     String exceptionPart = String.format("%s | Exception: %s", base, e.getClass().getSimpleName());
 
-    // Summarize cause chain classes, e.g., ApiException -> IOException -> SocketTimeoutException
+    // Summarize cause chain classes, e.g., ApiException -> IOException ->
+    // SocketTimeoutException
     java.util.List<Throwable> chain = ExceptionUtils.getThrowableList(e);
     String chainSummary = chain.stream().map(t -> t.getClass().getSimpleName()).distinct()
         .collect(java.util.stream.Collectors.joining(" -> "));

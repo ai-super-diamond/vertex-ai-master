@@ -1,27 +1,32 @@
 package com.jguru.vertexai.utils;
 
-import com.jguru.vertexai.client.VertexAiClient;
+import com.jguru.vertexai.service.ModelClient;
+import com.jguru.vertexai.service.ModelClientFactory;
+import com.jguru.vertexai.infrastructure.client.VertexAiClientFactory;
 import com.jguru.vertexai.service.RegionCatalog;
 import com.jguru.vertexai.service.RegionCatalog.Cluster;
 import com.jguru.vertexai.service.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.AuthenticationType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for generating content using Google GenAI and Vertex AI.
+ *
+ * @deprecated This class uses static methods. Consider using VertexAiService directly for better testability.
  */
+@Deprecated
 public class VertexUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(VertexUtils.class);
 
-  // Region lists exposed for legacy callers while sourcing data from the shared catalogue.
+  // Region lists exposed for legacy callers while sourcing data from the shared
+  // catalogue.
   public static final List<String> US_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.US));
   public static final List<String> EUROPE_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.EUROPE));
   public static final List<String> ASIA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.ASIA));
@@ -30,16 +35,14 @@ public class VertexUtils {
   public static final List<String> CANADA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.CANADA));
   public static final List<String> SOUTH_AMERICA_REGIONS = List.copyOf(RegionCatalog.getRegions(Cluster.SOUTH_AMERICA));
 
-  private static Properties modelProperties = null;
+  private static final ModelClientFactory DEFAULT_CLIENT_FACTORY = new VertexAiClientFactory();
+  private static final Properties MODEL_PROPERTIES = PropertiesLoader.load(logger, "models.config", "models.properties");
 
   /**
    * Loads model properties from external file or embedded resource.
    */
   private static Properties getModelProperties() {
-    if (modelProperties == null) {
-      modelProperties = PropertiesLoader.load(logger, "models.config", "models.properties");
-    }
-    return modelProperties;
+    return MODEL_PROPERTIES;
   }
 
   /**
@@ -75,7 +78,7 @@ public class VertexUtils {
   public static String generateContent(String apiKey, String modelName, String text) throws IOException {
     String resolvedModel = resolveModelName(modelName);
     AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey(apiKey).build();
-    VertexAiClient client = new VertexAiClient(authConfig);
+    ModelClient client = DEFAULT_CLIENT_FACTORY.createClient(authConfig);
     return client.callVertexAi(resolvedModel, text);
   }
 
@@ -98,7 +101,7 @@ public class VertexUtils {
     String resolvedModel = resolveModelName(modelName);
     AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
         .withProjectId(projectId).withLocation(location).build();
-    VertexAiClient client = new VertexAiClient(authConfig);
+    ModelClient client = DEFAULT_CLIENT_FACTORY.createClient(authConfig);
     return client.callVertexAi(resolvedModel, text);
   }
 
@@ -124,7 +127,7 @@ public class VertexUtils {
     String resolvedModel = resolveModelName(modelName);
     AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
         .withSaKeyFile(saKeyPath).withProjectId(projectId).withLocation(location).build();
-    VertexAiClient client = new VertexAiClient(authConfig);
+    ModelClient client = DEFAULT_CLIENT_FACTORY.createClient(authConfig);
     return client.callVertexAi(resolvedModel, text);
   }
 
@@ -153,7 +156,7 @@ public class VertexUtils {
       try {
         AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
             .withSaKeyFile(saKeyPath).withProjectId(projectId).withLocation(region).build();
-        VertexAiClient client = new VertexAiClient(authConfig);
+        ModelClient client = DEFAULT_CLIENT_FACTORY.createClient(authConfig);
         String response = client.callVertexAi(resolvedModel, prompt);
         if (response != null && !response.isEmpty()) {
           results.put(region, "SUCCESS");
