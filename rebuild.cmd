@@ -1,5 +1,19 @@
 @echo off
 setlocal
+REM ============================================================================
+REM rebuild.cmd - Full Clean Build and Smoke Test
+REM ============================================================================
+REM Purpose: Convenience script for developers to perform a complete rebuild.
+REM 
+REM What it does:
+REM   1. Runs Maven clean package (skipping tests for speed)
+REM   2. Verifies the JAR was created successfully
+REM   3. Runs a smoke test (vertex.cmd --help or java -jar)
+REM   4. Copies models.properties to working directory
+REM
+REM Usage:   .\rebuild.cmd
+REM See:     README.md "Scripts" section for more details
+REM ============================================================================
 
 echo --- Vertex AI Master: Rebuild Script ---
 
