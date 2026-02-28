@@ -5,17 +5,31 @@ import com.jguru.vertexai.application.usecase.GenerateContentUseCase;
 import com.jguru.vertexai.domain.ModelResolutionService;
 import com.jguru.vertexai.domain.entity.Model;
 import com.jguru.vertexai.domain.repository.ModelRepository;
+import com.jguru.vertexai.application.dto.GenerateContentRequest;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import com.jguru.vertexai.service.ModelClient;
+import com.jguru.vertexai.service.ModelClientFactory;
 
 public class IntegrationTest {
 
   @Test
   @DisplayName("Complete dependency injection flow should work end-to-end")
-  public void completeDependencyInjectionFlowShouldWorkEndToEnd() {
+  public void completeDependencyInjectionFlowShouldWorkEndToEnd() throws Exception {
     // Arrange - Create the configuration module
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-key");
+
+    // Mock the infrastructure dependency to avoid real API calls
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString())).thenReturn("mocked-response");
+    module.setModelClientFactory(mockFactory);
 
     // Act - Get the fully configured controller through dependency injection
     ModelController controller = module.provideModelController(module.provideGenerateContentUseCase(module.provideModelRepository(),
@@ -29,9 +43,8 @@ public class IntegrationTest {
 
     // Assert - Verify the result
     assertNotNull(result);
-    assertTrue(result.startsWith("SUCCESS:"), "Result should be formatted as success");
-    assertTrue(result.contains("gemini-1.5-pro-001"), "Result should contain the resolved model name");
-    assertTrue(result.contains("Hello, world!"), "Result should contain the original prompt");
+    // Note: The result from controller is formatted by presenter
+    assertTrue(result.contains("mocked-response"), "Result should contain the response from the mock client");
   }
 
   @Test
@@ -54,21 +67,30 @@ public class IntegrationTest {
 
   @Test
   @DisplayName("Use case should be properly connected to domain services")
-  public void useCaseShouldBeProperlyConnectedToDomainServices() {
+  public void useCaseShouldBeProperlyConnectedToDomainServices() throws Exception {
     // Arrange - Create the configuration module
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-key");
+
+    // Mock the infrastructure dependency
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString())).thenReturn("mocked-response-from-usecase");
+    module.setModelClientFactory(mockFactory);
 
     // Act - Get the use case with all its dependencies
     GenerateContentUseCase useCase = module.provideGenerateContentUseCase(module.provideModelRepository(),
         module.provideModelResolutionService(module.provideModelRepository()));
 
     // Act - Execute the use case
-    String result = useCase.execute("gemini.pro", "Test prompt");
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey("test-key").build();
+    GenerateContentRequest request = new GenerateContentRequest("gemini.pro", "Test prompt", authConfig);
+    String result = useCase.execute(request);
 
     // Assert - Verify the result
     assertNotNull(result);
-    assertTrue(result.contains("gemini-1.5-pro-001"), "Result should contain the resolved model name");
-    assertTrue(result.contains("Test prompt"), "Result should contain the original prompt");
+    assertEquals("mocked-response-from-usecase", result);
   }
 
   @Test

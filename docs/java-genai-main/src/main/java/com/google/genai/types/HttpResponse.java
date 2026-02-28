@@ -1,0 +1,104 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Auto-generated code. Do not edit.
+
+package com.google.genai.types;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.auto.value.AutoValue;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.genai.JsonSerializable;
+import java.util.Map;
+import java.util.Optional;
+
+/** A wrapper class for the http response. */
+@AutoValue
+@JsonDeserialize(builder = HttpResponse.Builder.class)
+public abstract class HttpResponse extends JsonSerializable {
+  /** Used to retain the processed HTTP headers in the response. */
+  @JsonProperty("headers")
+  public abstract Optional<Map<String, String>> headers();
+
+  /** The raw HTTP response body, in JSON format. */
+  @JsonProperty("body")
+  public abstract Optional<String> body();
+
+  /** Instantiates a builder for HttpResponse. */
+  @ExcludeFromGeneratedCoverageReport
+  public static Builder builder() {
+    return new AutoValue_HttpResponse.Builder();
+  }
+
+  /** Creates a builder with the same values as this instance. */
+  public abstract Builder toBuilder();
+
+  /** Builder for HttpResponse. */
+  @AutoValue.Builder
+  public abstract static class Builder {
+    /** For internal usage. Please use `HttpResponse.builder()` for instantiation. */
+    @JsonCreator
+    private static Builder create() {
+      return new AutoValue_HttpResponse.Builder();
+    }
+
+    /**
+     * Setter for headers.
+     *
+     * <p>headers: Used to retain the processed HTTP headers in the response.
+     */
+    @JsonProperty("headers")
+    public abstract Builder headers(Map<String, String> headers);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder headers(Optional<Map<String, String>> headers);
+
+    /** Clears the value of headers field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearHeaders() {
+      return headers(Optional.empty());
+    }
+
+    /**
+     * Setter for body.
+     *
+     * <p>body: The raw HTTP response body, in JSON format.
+     */
+    @JsonProperty("body")
+    public abstract Builder body(String body);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder body(Optional<String> body);
+
+    /** Clears the value of body field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearBody() {
+      return body(Optional.empty());
+    }
+
+    public abstract HttpResponse build();
+  }
+
+  /** Deserializes a JSON string to a HttpResponse object. */
+  @ExcludeFromGeneratedCoverageReport
+  public static HttpResponse fromJson(String jsonString) {
+    return JsonSerializable.fromJsonString(jsonString, HttpResponse.class);
+  }
+}

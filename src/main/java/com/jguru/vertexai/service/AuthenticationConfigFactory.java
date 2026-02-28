@@ -1,7 +1,7 @@
 package com.jguru.vertexai.service;
 
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

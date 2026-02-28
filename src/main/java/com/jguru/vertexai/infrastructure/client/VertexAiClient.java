@@ -4,9 +4,10 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.jguru.vertexai.service.ModelClient;
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
-import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
+import com.jguru.vertexai.domain.dto.GenerationResult;
+import com.jguru.vertexai.domain.exception.ApiCallException;
 import com.jguru.vertexai.utils.PropertiesLoader;
 import java.io.IOException;
 import java.util.Properties;
@@ -238,12 +239,15 @@ public class VertexAiClient implements ModelClient {
    * @throws IOException
    *           If the API call fails
    */
-  public String callVertexAi(String modelName, String text) throws IOException {
+  public String callVertexAi(String modelName, String text) throws ApiCallException {
     if (authConfig.getType() == AuthenticationType.API_KEY) {
       // Use API Key authentication (Gemini API)
       try (Client client = Client.builder().apiKey(authConfig.getApiKey()).build()) {
         GenerateContentResponse response = client.models.generateContent(modelName, text, null);
         return response.text();
+      } catch (Exception e) {
+        ApiCallException.ErrorType errorType = ApiCallException.categorizeError(e.getMessage());
+        throw new ApiCallException("API call failed: " + e.getMessage(), e, modelName, errorType);
       }
     } else {
       // Check for MaaS models (including google-openai provider) - prioritize
@@ -290,7 +294,7 @@ public class VertexAiClient implements ModelClient {
    * @throws IOException
    *           If the API call fails
    */
-  public GenerationResult callStandardVertexAi(String modelName, String textPrompt) throws IOException {
+  public GenerationResult callStandardVertexAi(String modelName, String textPrompt) throws ApiCallException {
     try {
       GoogleCredentials credentials = loadCredentials();
       String effectiveLocation = resolveEffectiveLocation(modelName);
@@ -311,7 +315,8 @@ public class VertexAiClient implements ModelClient {
           errorMessage += " (Hint: Check that your credentials have been granted the necessary IAM permissions for Vertex AI.)";
         }
       }
-      throw new IOException(errorMessage, e);
+      ApiCallException.ErrorType errorType = ApiCallException.categorizeError(errorMessage);
+      throw new ApiCallException(errorMessage != null ? errorMessage : "Unknown error", e, modelName, errorType);
     }
   }
 
@@ -328,30 +333,30 @@ public class VertexAiClient implements ModelClient {
    * @throws IOException
    *           If the API call fails
    */
-  public GenerationResult callChatCompletionsApi(String provider, String modelName, String textPrompt) throws IOException {
-    GoogleCredentials credentials = loadCredentials();
-
-    // Use Chat Completions API for MaaS models
-    logger.info("Using Chat Completions API for model: {} with provider: {}", modelName, provider);
-
-    if (credentials == null) {
-      // Use ADC for Chat Completions
-      credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
-    }
-
-    ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
-
-    // For models with OpenAI flag, prepend the provider prefix
-    // For MaaS models, prepend the provider prefix
-    // For google-openai models, use the model name as-is (it already contains
-    // "google/" prefix)
-    String modelWithPrefix = modelName;
-    if (!"google-openai".equalsIgnoreCase(provider)) {
-      modelWithPrefix = provider + "/" + modelName;
-      logger.info("Model name with provider: {}", modelWithPrefix);
-    }
-
+  public GenerationResult callChatCompletionsApi(String provider, String modelName, String textPrompt) throws ApiCallException {
     try {
+      GoogleCredentials credentials = loadCredentials();
+
+      // Use Chat Completions API for MaaS models
+      logger.info("Using Chat Completions API for model: {} with provider: {}", modelName, provider);
+
+      if (credentials == null) {
+        // Use ADC for Chat Completions
+        credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
+      }
+
+      ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
+
+      // For models with OpenAI flag, prepend the provider prefix
+      // For MaaS models, prepend the provider prefix
+      // For google-openai models, use the model name as-is (it already contains
+      // "google/" prefix)
+      String modelWithPrefix = modelName;
+      if (!"google-openai".equalsIgnoreCase(provider)) {
+        modelWithPrefix = provider + "/" + modelName;
+        logger.info("Model name with provider: {}", modelWithPrefix);
+      }
+
       String response = chatClient.generateContent(modelWithPrefix, textPrompt);
       return GenerationResult.builder().withText(response).build();
     } catch (IOException e) {
@@ -364,7 +369,8 @@ public class VertexAiClient implements ModelClient {
           errorMessage += " (Hint: Check that your credentials have been granted necessary IAM permissions for Vertex AI.)";
         }
       }
-      throw new IOException(errorMessage, e);
+      ApiCallException.ErrorType errorType = ApiCallException.categorizeError(errorMessage);
+      throw new ApiCallException(errorMessage != null ? errorMessage : "Unknown error", e, modelName, errorType);
     }
   }
 }

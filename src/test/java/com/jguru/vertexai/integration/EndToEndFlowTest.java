@@ -2,17 +2,29 @@ package com.jguru.vertexai.integration;
 
 import com.jguru.vertexai.adapter.ModelController;
 import com.jguru.vertexai.config.ApplicationModule;
+import com.jguru.vertexai.service.ModelClient;
+import com.jguru.vertexai.service.ModelClientFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class EndToEndFlowTest {
 
   @Test
   @DisplayName("Should execute complete flow from controller to infrastructure and back")
-  public void shouldExecuteCompleteFlowFromControllerToInfrastructureAndBack() {
+  public void shouldExecuteCompleteFlowFromControllerToInfrastructureAndBack() throws Exception {
     // Arrange - Create the complete application module with all dependencies
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-api-key");
+
+    // Mock the infrastructure dependency to avoid real API calls
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString()))
+        .thenAnswer(invocation -> "Mock response for " + invocation.getArgument(0) + " with prompt: " + invocation.getArgument(1));
+    module.setModelClientFactory(mockFactory);
 
     // Act - Get the fully configured controller (this wires up the entire dependency chain)
     ModelController controller = module.provideModelController(module.provideGenerateContentUseCase(module.provideModelRepository(),
@@ -33,9 +45,18 @@ public class EndToEndFlowTest {
 
   @Test
   @DisplayName("Should handle error flow properly through all layers")
-  public void shouldHandleErrorFlowProperlyThroughAllLayers() {
+  public void shouldHandleErrorFlowProperlyThroughAllLayers() throws Exception {
     // Arrange - Create the complete application module
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-api-key");
+
+    // Mock the infrastructure dependency to avoid real API calls
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString()))
+        .thenAnswer(invocation -> "Mock response for " + invocation.getArgument(0) + " with prompt: " + invocation.getArgument(1));
+    module.setModelClientFactory(mockFactory);
 
     // Act - Get the controller
     ModelController controller = module.provideModelController(module.provideGenerateContentUseCase(module.provideModelRepository(),
@@ -52,9 +73,18 @@ public class EndToEndFlowTest {
 
   @Test
   @DisplayName("Should demonstrate dependency inversion working end-to-end")
-  public void shouldDemonstrateDependencyInversionWorkingEndToEnd() {
+  public void shouldDemonstrateDependencyInversionWorkingEndToEnd() throws Exception {
     // Arrange - Create the application module
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-api-key");
+
+    // Mock the infrastructure dependency to avoid real API calls
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString()))
+        .thenAnswer(invocation -> "Mock response for " + invocation.getArgument(0) + " with prompt: " + invocation.getArgument(1));
+    module.setModelClientFactory(mockFactory);
 
     // Act - The domain layer uses repository interface, but infrastructure provides implementation
     // This demonstrates dependency inversion: domain doesn't know about infrastructure details
@@ -80,9 +110,18 @@ public class EndToEndFlowTest {
 
   @Test
   @DisplayName("Should maintain clean architecture boundaries throughout execution")
-  public void shouldMaintainCleanArchitectureBoundariesThroughoutExecution() {
+  public void shouldMaintainCleanArchitectureBoundariesThroughoutExecution() throws Exception {
     // Arrange - Create the application module to set up clean architecture
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-api-key");
+
+    // Mock the infrastructure dependency to avoid real API calls
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString()))
+        .thenAnswer(invocation -> "Mock response for " + invocation.getArgument(0) + " with prompt: " + invocation.getArgument(1));
+    module.setModelClientFactory(mockFactory);
 
     // Act - Get all the key components across different layers
     var modelRepository = module.provideModelRepository();
@@ -116,9 +155,18 @@ public class EndToEndFlowTest {
 
   @Test
   @DisplayName("Should validate that domain layer remains independent")
-  public void shouldValidateThatDomainLayerRemainsIndependent() {
+  public void shouldValidateThatDomainLayerRemainsIndependent() throws Exception {
     // Arrange - The domain layer should be independent of other layers
     ApplicationModule module = new ApplicationModule();
+    module.setApiKey("test-api-key");
+
+    // Mock the infrastructure dependency to avoid real API calls
+    ModelClientFactory mockFactory = mock(ModelClientFactory.class);
+    ModelClient mockClient = mock(ModelClient.class);
+    when(mockFactory.createClient(any())).thenReturn(mockClient);
+    when(mockClient.callVertexAi(anyString(), anyString()))
+        .thenAnswer(invocation -> "Mock response for " + invocation.getArgument(0) + " with prompt: " + invocation.getArgument(1));
+    module.setModelClientFactory(mockFactory);
 
     // Act - Get the domain service with its repository dependency
     var modelRepository = module.provideModelRepository();

@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

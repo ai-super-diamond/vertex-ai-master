@@ -1,8 +1,9 @@
 package com.jguru.vertexai.infrastructure.client;
 
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
-import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
+import com.jguru.vertexai.domain.dto.GenerationResult;
+import com.jguru.vertexai.domain.exception.ApiCallException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -155,7 +156,7 @@ class VertexAiClientTest {
     VertexAiClient client = new VertexAiClient(authConfig);
 
     // When & Then
-    assertThrows(IOException.class, () -> client.callVertexAi("test-model", "test prompt"));
+    assertThrows(ApiCallException.class, () -> client.callVertexAi("test-model", "test prompt"));
   }
 
   @Test
@@ -189,7 +190,7 @@ class VertexAiClientTest {
   }
 
   @Test
-  void shouldRouteToChatCompletionsWhenProviderIsPresent() throws IOException {
+  void shouldRouteToChatCompletionsWhenProviderIsPresent() throws Exception {
     // Given: Custom properties injected via reflection helper
     Properties customProps = new Properties();
     customProps.setProperty("maas-model", "maas-model-full");
@@ -208,7 +209,7 @@ class VertexAiClientTest {
   }
 
   @Test
-  void shouldRouteToChatCompletionsWhenOpenAIFlagIsPresent() throws IOException {
+  void shouldRouteToChatCompletionsWhenOpenAIFlagIsPresent() throws Exception {
     // Given: Custom properties injected via reflection helper
     Properties customProps = new Properties();
     customProps.setProperty("openai-model", "openai-model-full");
@@ -227,7 +228,7 @@ class VertexAiClientTest {
   }
 
   @Test
-  void shouldRouteToStandardVertexAiForModelWithoutSpecialFlags() throws IOException {
+  void shouldRouteToStandardVertexAiForModelWithoutSpecialFlags() throws Exception {
     // Given: Custom properties injected via to reflection helper (no special flags)
     Properties customProps = new Properties();
     customProps.setProperty("standard-model", "standard-model-name");
@@ -247,7 +248,7 @@ class VertexAiClientTest {
   }
 
   @Test
-  void shouldRouteToChatCompletionsWhenGoogleOpenAiProviderIsPresent() throws IOException {
+  void shouldRouteToChatCompletionsWhenGoogleOpenAiProviderIsPresent() throws Exception {
     // Given: Custom properties injected via to reflection helper
     Properties customProps = new Properties();
     customProps.setProperty("gemini.flash.openapi", "google/gemini-2.0-flash-001");
@@ -273,7 +274,7 @@ class VertexAiClientTest {
   // ============== Error Hint Logic Tests for callStandardVertexAi ==============
 
   @Test
-  void shouldAppend404HintForCallStandardVertexAi() throws IOException {
+  void shouldAppend404HintForCallStandardVertexAi() throws Exception {
     // Given: A spy client with properties for a standard model
     Properties customProps = new Properties();
     customProps.setProperty("standard-model", "standard-model-name");
@@ -287,14 +288,15 @@ class VertexAiClientTest {
 
     // When & Then: The exception should contain a helpful hint (from
     // callStandardVertexAi's catch block)
-    IOException exception = assertThrows(IOException.class, () -> spyClient.callStandardVertexAi("standard-model-name", "test prompt"));
+    ApiCallException exception = assertThrows(ApiCallException.class,
+        () -> spyClient.callStandardVertexAi("standard-model-name", "test prompt"));
 
     assertThat(exception.getMessage())
         .contains("(Hint: Model may not be enabled in your GCP project. Check the model card and click 'Enable'.)");
   }
 
   @Test
-  void shouldAppend403HintForCallStandardVertexAi() throws IOException {
+  void shouldAppend403HintForCallStandardVertexAi() throws Exception {
     // Given: A spy client with properties for a standard model
     Properties customProps = new Properties();
     customProps.setProperty("standard-model", "standard-model-name");
@@ -308,24 +310,28 @@ class VertexAiClientTest {
 
     // When & Then: The exception should contain a helpful hint (from
     // callStandardVertexAi's catch block)
-    IOException exception = assertThrows(IOException.class, () -> spyClient.callStandardVertexAi("standard-model-name", "test prompt"));
+    ApiCallException exception = assertThrows(ApiCallException.class,
+        () -> spyClient.callStandardVertexAi("standard-model-name", "test prompt"));
 
     assertThat(exception.getMessage())
         .contains("(Hint: Check that your credentials have been granted the necessary IAM permissions for Vertex AI.)");
   }
 
   @Test
-  void shouldNotAppendHintForCallStandardVertexAiOnOtherErrors() throws IOException {
+  void shouldNotAppendHintForCallStandardVertexAiOnOtherErrors() throws Exception {
     // Given: A spy client with properties for a standard model
     Properties customProps = new Properties();
     customProps.setProperty("standard-model", "standard-model-name");
     setModelProperties(spyClient, customProps);
 
-    // And: We stub the client to throw a non-404/403 exception
-    doThrow(new IOException("HTTP 500: Internal Server Error")).when(spyClient).callStandardVertexAi(anyString(), anyString());
+    // And: We stub the internal loadCredentials method to throw a non-404/403 exception
+    // This allows us to test the catch block in callStandardVertexAi
+    doCallRealMethod().when(spyClient).callStandardVertexAi(anyString(), anyString());
+    doThrow(new IOException("HTTP 500: Internal Server Error")).when(spyClient).loadCredentials();
 
     // When & Then: The exception should NOT contain hints
-    IOException exception = assertThrows(IOException.class, () -> spyClient.callStandardVertexAi("standard-model-name", "test prompt"));
+    ApiCallException exception = assertThrows(ApiCallException.class,
+        () -> spyClient.callStandardVertexAi("standard-model-name", "test prompt"));
 
     assertThat(exception.getMessage()).doesNotContain("(Hint:");
   }
@@ -333,7 +339,7 @@ class VertexAiClientTest {
   // ============== Region Resolution Tests ==============
 
   @Test
-  void shouldUseDefaultLocationWhenNoRegionOverride() throws IOException {
+  void shouldUseDefaultLocationWhenNoRegionOverride() throws Exception {
     // Given: Custom properties without a region override
     Properties customProps = new Properties();
     customProps.setProperty("standard-model", "standard-model-name");
@@ -351,7 +357,7 @@ class VertexAiClientTest {
   }
 
   @Test
-  void shouldUseModelRegionOverrideWhenPresent() throws IOException {
+  void shouldUseModelRegionOverrideWhenPresent() throws Exception {
     // Given: Custom properties with region override
     Properties customProps = new Properties();
     customProps.setProperty("regional-model", "regional-model-name");
@@ -372,7 +378,7 @@ class VertexAiClientTest {
   }
 
   @Test
-  void shouldUseRegionalModelRegionOverride() throws IOException {
+  void shouldUseRegionalModelRegionOverride() throws Exception {
     // Given: Custom properties with regional override
     Properties customProps = new Properties();
     customProps.setProperty("us-east5-model", "us-east5-model-name");

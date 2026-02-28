@@ -8,9 +8,10 @@ import static org.mockito.Mockito.when;
 
 import com.jguru.vertexai.service.ModelClient;
 import com.jguru.vertexai.service.ModelClientFactory;
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
-import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
+import com.jguru.vertexai.domain.dto.GenerationResult;
+import com.jguru.vertexai.domain.exception.ApiCallException;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class ModelClientFactoryTest {
   }
 
   @Test
-  void shouldCreateMockClientForTesting() throws IOException {
+  void shouldCreateMockClientForTesting() throws IOException, ApiCallException {
     ModelClient mockClient = mock(ModelClient.class);
     when(mockClient.callVertexAi(any(), any())).thenReturn("Mocked response");
 
@@ -67,7 +68,7 @@ class ModelClientFactoryTest {
   }
 
   @Test
-  void mockFactoryShouldEnableServiceLayerTesting() throws IOException {
+  void mockFactoryShouldEnableServiceLayerTesting() throws IOException, ApiCallException {
     ModelClient mockClient = mock(ModelClient.class);
     GenerationResult mockResult = GenerationResult.success("Test response");
     when(mockClient.callStandardVertexAi(any(), any())).thenReturn(mockResult);

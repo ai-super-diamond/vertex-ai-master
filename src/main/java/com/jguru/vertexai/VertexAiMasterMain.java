@@ -8,9 +8,9 @@ import com.jguru.vertexai.service.RegionProviderImpl;
 import com.jguru.vertexai.service.VertexAiService;
 import com.jguru.vertexai.service.VertexAiServiceImpl;
 import com.jguru.vertexai.service.WorldwideCheckUseCase;
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.GenerationRequest;
-import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.domain.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
 import com.jguru.vertexai.utils.OutputRedirectionManager;
 import com.jguru.vertexai.utils.PropertiesLoader;
@@ -69,6 +69,9 @@ public class VertexAiMasterMain implements Callable<Integer> {
 
     @Option(names = {"-model-file"}, description = "Test all models from properties file (.properties).")
     String modelFile;
+
+    @Option(names = {"-regions-file"}, description = "Override default region configuration (.properties).")
+    String regionsFile;
   }
 
   @ArgGroup
@@ -95,13 +98,13 @@ public class VertexAiMasterMain implements Callable<Integer> {
   @Parameters(index = "0", arity = "0..1", description = "The text prompt to send to the model.")
   private String text;
 
-  private final VertexAiService vertexAiService;
-  private final RegionProvider regionProvider;
+  private VertexAiService vertexAiService;
+  private RegionProvider regionProvider;
   private final AuthenticationConfigFactory authConfigFactory;
   private final OutputRedirectionManager outputManager;
 
   public VertexAiMasterMain() {
-    this(createDefaultVertexAiService(), createDefaultRegionProvider(), new AuthenticationConfigFactory(), new OutputRedirectionManager());
+    this(null, null, new AuthenticationConfigFactory(), new OutputRedirectionManager());
   }
 
   public VertexAiMasterMain(VertexAiService vertexAiService, RegionProvider regionProvider, AuthenticationConfigFactory authConfigFactory,
@@ -118,8 +121,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
     return new RegionProviderImpl(regionProperties);
   }
 
-  private static VertexAiService createDefaultVertexAiService() {
-    RegionProvider regionProvider = createDefaultRegionProvider();
+  private static VertexAiService createDefaultVertexAiService(RegionProvider regionProvider) {
     ModelClientFactory modelClientFactory = new com.jguru.vertexai.infrastructure.client.VertexAiClientFactory();
     Properties modelProperties = PropertiesLoader.load(LoggerFactory.getLogger(VertexAiServiceImpl.class), "models.config",
         "models.properties");
@@ -146,6 +148,23 @@ public class VertexAiMasterMain implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
+    if (modelSource != null && modelSource.modelFile != null && !modelSource.modelFile.isBlank()) {
+      System.setProperty("models.config", modelSource.modelFile);
+    }
+
+    if (modelSource != null && modelSource.regionsFile != null && !modelSource.regionsFile.isBlank()) {
+      System.setProperty("regions.config", modelSource.regionsFile);
+    } else if (java.nio.file.Files.exists(java.nio.file.Paths.get("regions.properties"))) {
+      System.setProperty("regions.config", "regions.properties");
+    }
+
+    if (this.regionProvider == null) {
+      this.regionProvider = createDefaultRegionProvider();
+    }
+    if (this.vertexAiService == null) {
+      this.vertexAiService = createDefaultVertexAiService(this.regionProvider);
+    }
+
     outputManager.setupOutputRedirection(outputFile, debug, checkAllRegions, worldwide);
 
     try {
@@ -181,7 +200,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
     GenerationResult result = vertexAiService.generateContent(request);
 
     if (result.isSuccess()) {
-      logger.info(result.getContent());
+      System.out.println(result.getContent());
       return 0;
     } else {
       logger.error("Error generating content: {}", result.getErrorMessage());

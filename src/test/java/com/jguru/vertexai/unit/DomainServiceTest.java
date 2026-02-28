@@ -2,7 +2,7 @@ package com.jguru.vertexai.unit;
 
 import com.jguru.vertexai.domain.ModelResolutionService;
 import com.jguru.vertexai.domain.entity.Model;
-import com.jguru.vertexai.domain.impl.ModelResolutionServiceImpl;
+import com.jguru.vertexai.service.impl.ModelResolutionServiceImpl;
 import com.jguru.vertexai.domain.repository.ModelRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;

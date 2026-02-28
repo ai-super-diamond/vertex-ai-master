@@ -1,47 +1,55 @@
 package com.jguru.vertexai.application.usecase.impl;
 
+import com.jguru.vertexai.application.dto.GenerateContentRequest;
 import com.jguru.vertexai.application.usecase.GenerateContentUseCase;
 import com.jguru.vertexai.domain.ModelResolutionService;
 import com.jguru.vertexai.domain.entity.Model;
-import com.jguru.vertexai.domain.repository.ModelRepository;
-import com.jguru.vertexai.infrastructure.GoogleVertexAIAdapter;
+import com.jguru.vertexai.domain.exception.ApiCallException;
+import com.jguru.vertexai.domain.exception.ModelNotFoundException;
+import com.jguru.vertexai.service.ModelClient;
+import com.jguru.vertexai.service.ModelClientFactory;
 
+/**
+ * Implementation of GenerateContentUseCase following Clean Architecture principles.
+ *
+ * <p>
+ * This use case orchestrates the content generation process by: 1. Resolving model aliases to actual model configurations 2. Creating
+ * appropriate API clients via factory 3. Delegating API calls to infrastructure layer
+ * </p>
+ *
+ * <p>
+ * Note: This class depends only on domain interfaces (ports), never on infrastructure implementations. This maintains the Dependency Rule
+ * of Clean Architecture.
+ * </p>
+ */
 public class GenerateContentUseCaseImpl implements GenerateContentUseCase {
 
-  private final ModelRepository modelRepository;
-
   private final ModelResolutionService modelResolutionService;
+  private final ModelClientFactory modelClientFactory;
 
-  private final GoogleVertexAIAdapter googleVertexAIAdapter;
-
-  public GenerateContentUseCaseImpl(ModelRepository modelRepository, ModelResolutionService modelResolutionService,
-      GoogleVertexAIAdapter googleVertexAIAdapter) {
-    this.modelRepository = modelRepository;
-
+  public GenerateContentUseCaseImpl(ModelResolutionService modelResolutionService, ModelClientFactory modelClientFactory) {
     this.modelResolutionService = modelResolutionService;
-
-    this.googleVertexAIAdapter = googleVertexAIAdapter;
+    this.modelClientFactory = modelClientFactory;
   }
 
   @Override
-  public String execute(String modelAlias, String prompt) {
-    if (modelAlias == null || modelAlias.trim().isEmpty()) {
-      throw new IllegalArgumentException("Model alias cannot be null or empty");
+  public String execute(GenerateContentRequest request) throws ModelNotFoundException, ApiCallException {
+    // Validate request (already done in GenerateContentRequest constructor, but
+    // defensive)
+    if (request == null) {
+      throw new IllegalArgumentException("Request cannot be null");
     }
 
-    if (prompt == null || prompt.trim().isEmpty()) {
-      throw new IllegalArgumentException("Prompt cannot be null or empty");
-    }
-
-    // Resolve the model alias to get the full model details
-
-    Model model = modelResolutionService.resolveModel(modelAlias);
-
+    // Resolve model alias to actual model
+    Model model = modelResolutionService.resolveModel(request.getModelAlias());
     if (model == null) {
-      throw new IllegalArgumentException("Model with alias '" + modelAlias + "' not found");
+      throw new ModelNotFoundException(request.getModelAlias());
     }
 
-    // Call the infrastructure layer to actually interact with the Vertex AI API
-    return googleVertexAIAdapter.callVertexAI(model.getFullName(), prompt, "test-project", "us-central1", "test-api-key");
+    // Create client with authentication config from request (NO hardcoded values!)
+    ModelClient client = modelClientFactory.createClient(request.getAuthenticationConfig());
+
+    // Execute API call and return result
+    return client.callVertexAi(model.getFullName(), request.getPrompt());
   }
 }

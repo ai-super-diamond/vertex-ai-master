@@ -1,13 +1,14 @@
 package com.jguru.vertexai.service;
 
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.exception.DomainException;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.ErrorType;
+import com.jguru.vertexai.domain.exception.ApiCallException;
 import com.jguru.vertexai.service.dto.GenerationRequest;
-import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.domain.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,23 +59,28 @@ public class VertexAiServiceImpl implements VertexAiService {
    * Generates content based on the provided request.
    */
   @Override
-  public GenerationResult generateContent(GenerationRequest request) throws Exception {
+  public GenerationResult generateContent(GenerationRequest request) throws DomainException {
     String resolvedModel = resolveModelName(request.getModelName());
+    GenerationResult result;
 
     try {
       ModelClient client = modelClientFactory.createClient(request.getAuthenticationConfig());
+      // Generate content using the client
       String response = client.callVertexAi(resolvedModel, request.getText());
-      return GenerationResult.success(response);
-    } catch (Exception e) {
-      return GenerationResult.failure("Error generating content: " + e.getMessage());
+      result = GenerationResult.builder().withText(response).build();
+      logger.info("Successfully generated content using model: {}", resolvedModel);
+    } catch (ApiCallException e) {
+      result = GenerationResult.builder().withErrorMessage(e.getMessage()).build();
+      logger.error("Error generating content for model '{}': {}", resolvedModel, e.getMessage(), e);
     }
+    return result;
   }
 
   /**
    * Checks model availability across multiple regions.
    */
   @Override
-  public RegionCheckResult checkRegionAvailability(RegionCheckRequest request) throws Exception {
+  public RegionCheckResult checkRegionAvailability(RegionCheckRequest request) throws DomainException {
     Map<String, String> results = new HashMap<>();
     String prompt = (request.getTestPrompt() != null && !request.getTestPrompt().isEmpty()) ? request.getTestPrompt() : "Hello";
     String resolvedModel = resolveModelName(request.getModelName());
@@ -93,7 +99,7 @@ public class VertexAiServiceImpl implements VertexAiService {
         } else {
           results.put(region, "ERROR: Empty response");
         }
-      } catch (IOException e) {
+      } catch (ApiCallException e) {
         String errorMsg = e.getMessage();
         // Extract meaningful error info using ErrorType enum
         ErrorType errorType = ErrorType.fromMessage(errorMsg);

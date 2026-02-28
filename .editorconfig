@@ -1,5 +1,11 @@
 # EditorConfig for consistent coding styles
 # https://editorconfig.org
+#
+# NOTE: This file should match the formatting rules defined in eclipse-formatter.xml.
+# Key values from eclipse-formatter.xml:
+#   - indent_size = 2 (tabulation.size, indentation.size)
+#   - max_line_length = 140 (lineSplit, comment.line_length)
+#   - indent_style = space (tabulation.char)
 
 root = true
 
@@ -14,6 +20,7 @@ trim_trailing_whitespace = true
 [*.java]
 indent_style = space
 indent_size = 2
+max_line_length = 140
 
 # XML/POM files
 [*.xml]

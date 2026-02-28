@@ -2,7 +2,7 @@ package com.jguru.vertexai.infrastructure.client;
 
 import com.jguru.vertexai.service.ModelClient;
 import com.jguru.vertexai.service.ModelClientFactory;
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 
 /**
  * Production implementation of ModelClientFactory that creates VertexAiClient instances.

@@ -1,6 +1,6 @@
 package com.jguru.vertexai.service;
 
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 
 /**
  * Factory interface for creating ModelClient instances.

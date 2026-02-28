@@ -1,7 +1,8 @@
 package com.jguru.vertexai.service;
 
+import com.jguru.vertexai.domain.exception.DomainException;
 import com.jguru.vertexai.service.dto.GenerationRequest;
-import com.jguru.vertexai.service.dto.GenerationResult;
+import com.jguru.vertexai.domain.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
 import java.util.List;
@@ -17,10 +18,10 @@ public interface VertexAiService {
    * @param request
    *          the generation request
    * @return the result containing the generated content
-   * @throws Exception
+   * @throws DomainException
    *           if generation fails
    */
-  GenerationResult generateContent(GenerationRequest request) throws Exception;
+  GenerationResult generateContent(GenerationRequest request) throws DomainException;
 
   /**
    * Checks model availability across multiple regions.
@@ -28,10 +29,10 @@ public interface VertexAiService {
    * @param request
    *          the region check request
    * @return the result containing region availability information
-   * @throws Exception
+   * @throws DomainException
    *           if region check fails
    */
-  RegionCheckResult checkRegionAvailability(RegionCheckRequest request) throws Exception;
+  RegionCheckResult checkRegionAvailability(RegionCheckRequest request) throws DomainException;
 
   /**
    * Resolves a model name or alias to the actual model name.

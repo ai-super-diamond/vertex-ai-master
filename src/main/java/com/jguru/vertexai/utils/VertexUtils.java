@@ -1,12 +1,13 @@
 package com.jguru.vertexai.utils;
 
+import com.jguru.vertexai.domain.exception.ApiCallException;
 import com.jguru.vertexai.service.ModelClient;
 import com.jguru.vertexai.service.ModelClientFactory;
 import com.jguru.vertexai.infrastructure.client.VertexAiClientFactory;
 import com.jguru.vertexai.service.RegionCatalog;
 import com.jguru.vertexai.service.RegionCatalog.Cluster;
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
-import com.jguru.vertexai.service.dto.AuthenticationType;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationType;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -75,7 +76,7 @@ public class VertexUtils {
    * @throws IOException
    *           If the API call fails
    */
-  public static String generateContent(String apiKey, String modelName, String text) throws IOException {
+  public static String generateContent(String apiKey, String modelName, String text) throws IOException, ApiCallException {
     String resolvedModel = resolveModelName(modelName);
     AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey(apiKey).build();
     ModelClient client = DEFAULT_CLIENT_FACTORY.createClient(authConfig);
@@ -97,7 +98,8 @@ public class VertexUtils {
    * @throws IOException
    *           If the API call fails
    */
-  public static String generateContent(String projectId, String location, String modelName, String text) throws IOException {
+  public static String generateContent(String projectId, String location, String modelName, String text)
+      throws IOException, ApiCallException {
     String resolvedModel = resolveModelName(modelName);
     AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
         .withProjectId(projectId).withLocation(location).build();
@@ -123,7 +125,7 @@ public class VertexUtils {
    *           If the API call fails
    */
   public static String generateContent(String saKeyPath, String projectId, String location, String modelName, String text)
-      throws IOException {
+      throws IOException, ApiCallException {
     String resolvedModel = resolveModelName(modelName);
     AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
         .withSaKeyFile(saKeyPath).withProjectId(projectId).withLocation(location).build();
@@ -163,7 +165,7 @@ public class VertexUtils {
         } else {
           results.put(region, "ERROR: Empty response");
         }
-      } catch (IOException e) {
+      } catch (ApiCallException e) {
         String errorMsg = e.getMessage();
         // Extract meaningful error info
         if (errorMsg.contains("404")) {

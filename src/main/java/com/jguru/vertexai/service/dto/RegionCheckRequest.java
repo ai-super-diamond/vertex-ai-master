@@ -1,5 +1,6 @@
 package com.jguru.vertexai.service.dto;
 
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import java.util.List;
 
 /**

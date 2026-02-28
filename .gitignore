@@ -7,6 +7,7 @@ target/
 ### Generated Maven files ###
 effective-pom
 dependency-reduced-pom.xml
+compile_output.txt
 
 ### Compiled files ###
 *.class
@@ -59,16 +60,10 @@ deepseek-r1-region-discovery_*.csv
 region-discovery_*.csv
 
 ### Results Directory ###
+results/
 tools/talisman/talisman.exe
-
-### Security tools ###
 .talismanrc
 
 ### Runtime Results ###
-results/
+results/runtime-results-*.txt
 /bin/vertex.exe
-
-### Docs - genai lib sourse code ###
-Docs/java-genai-main
-bin/instrument.dll
-nul

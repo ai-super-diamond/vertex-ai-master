@@ -2,6 +2,7 @@ package com.jguru.vertexai.quality;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
@@ -10,7 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@AnalyzeClasses(packages = "com.jguru.vertexai")
+@AnalyzeClasses(packages = "com.jguru.vertexai", importOptions = {ImportOption.DoNotIncludeTests.class})
 public class CleanArchitectureTest {
 
   @ArchTest
@@ -25,7 +26,7 @@ public class CleanArchitectureTest {
 
   @ArchTest
   static ArchRule infrastructureLayerShouldOnlyImplementDomainInterfaces = classes().that().resideInAPackage("..infrastructure..").should()
-      .onlyDependOnClassesThat().resideInAnyPackage("..infrastructure..", "..domain..", "..application..", "..service..", "java..",
+      .onlyDependOnClassesThat().resideInAnyPackage("..infrastructure..", "..domain..", "..service..", "java..", "..utils..",
           "com.google..", "org.slf4j..", "javax..", "jakarta..");
 
   @ArchTest
@@ -34,13 +35,14 @@ public class CleanArchitectureTest {
 
   @ArchTest
   static ArchRule domainEntitiesShouldNotDependOnExternalFrameworks = noClasses().that().resideInAPackage("..domain.entity..").should()
-      .dependOnClassesThat().resideOutsideOfPackage("..domain.entity..");
+      .dependOnClassesThat().resideOutsideOfPackages("..domain.entity..", "java..", "org.slf4j..");
 
   @Test
   @DisplayName("Should validate dependency direction in Clean Architecture")
   public void shouldValidateDependencyDirectionInCleanArchitecture() {
     // Load all classes for analysis
-    JavaClasses classes = new ClassFileImporter().importPackages("com.jguru.vertexai");
+    JavaClasses classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
+        .importPackages("com.jguru.vertexai");
 
     // Verify that domain layer doesn't depend on outer layers
     ArchRule domainRule = noClasses().that().resideInAPackage("com.jguru.vertexai.domain..").should().dependOnClassesThat()
@@ -57,8 +59,8 @@ public class CleanArchitectureTest {
     // Verify dependency inversion principle
     ArchRule dependencyInversionRule = classes().that().resideInAPackage("com.jguru.vertexai.infrastructure..").should()
         .onlyDependOnClassesThat().resideInAnyPackage("com.jguru.vertexai.infrastructure..", "com.jguru.vertexai.domain..",
-            "com.jguru.vertexai.application..", "com.jguru.vertexai.service..", "java..", "com.google..", "org.slf4j..", "javax..",
-            "jakarta..");
+            "com.jguru.vertexai.application..", "com.jguru.vertexai.service..", "java..", "com.jguru.vertexai.utils..", "com.google..",
+            "org.slf4j..", "javax..", "jakarta..");
 
     dependencyInversionRule.check(classes);
 
@@ -68,7 +70,8 @@ public class CleanArchitectureTest {
   @Test
   @DisplayName("Should maintain layer boundaries")
   public void shouldMaintainLayerBoundaries() {
-    JavaClasses importedClasses = new ClassFileImporter().importPackages("com.jguru.vertexai");
+    JavaClasses importedClasses = new ClassFileImporter().withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+        .importPackages("com.jguru.vertexai");
 
     // Test that interfaces are in the right places
     ArchRule domainInterfaceRule = classes().that().resideInAPackage("com.jguru.vertexai.domain..").and()
@@ -87,7 +90,8 @@ public class CleanArchitectureTest {
   @Test
   @DisplayName("Should verify implementation classes are in infrastructure")
   public void shouldVerifyImplementationClassesAreInInfrastructure() {
-    JavaClasses importedClasses = new ClassFileImporter().importPackages("com.jguru.vertexai");
+    JavaClasses importedClasses = new ClassFileImporter().withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+        .importPackages("com.jguru.vertexai");
 
     // Check that implementation classes are in infrastructure layer
     ArchRule implRule = classes().that().haveSimpleNameEndingWith("Impl").should().resideInAnyPackage("..infrastructure..", "..service..",

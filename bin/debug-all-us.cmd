@@ -23,12 +23,12 @@ echo Testing all models from file (with debug info)
 echo ========================================
 echo.
 REM Ensure shaded JAR exists; build if missing
-if not exist "target\vertex-0.0.1-SNAPSHOT.jar" (
+if not exist "..\target\vertex-0.0.1-SNAPSHOT.jar" (
   echo JAR not found. Building project...
-  d:\java\maven\bin\mvn.cmd clean package -DskipTests
+  d:\java\maven\bin\mvn.cmd -f "C:\java\projects\github-repos\vertex-ai-master\pom.xml" clean package -DskipTests
 )
 
-java -jar ..target\vertex-0.0.1-SNAPSHOT.jar --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%" --debug
+java -jar ..\target\vertex-0.0.1-SNAPSHOT.jar --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%" --debug
 
 echo.
 echo ========================================

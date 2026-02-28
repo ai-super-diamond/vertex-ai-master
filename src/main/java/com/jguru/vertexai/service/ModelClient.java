@@ -1,7 +1,7 @@
 package com.jguru.vertexai.service;
 
-import com.jguru.vertexai.service.dto.GenerationResult;
-import java.io.IOException;
+import com.jguru.vertexai.domain.exception.ApiCallException;
+import com.jguru.vertexai.domain.dto.GenerationResult;
 
 /**
  * Abstraction for AI model clients that interact with various AI platforms.
@@ -51,72 +51,44 @@ public interface ModelClient {
    * <p>
    * The routing decision is based on model properties configuration that identifies the model provider (e.g., deepseek-ai, openai,
    * google-openai).
-   * </p>
+   *
+   * /** Calls the AI model API to generate a text response.
    *
    * @param modelName
-   *          The model name or alias (e.g., "gemini-1.5-pro", "deepseek-chat")
+   *          The model to use
    * @param text
-   *          The prompt text to send to the model
-   * @return The generated text response from the model
-   * @throws IOException
-   *           If the API call fails due to network, authentication, or API errors
-   * @throws IllegalArgumentException
-   *           If modelName or text is null or empty
-   */
-  String callVertexAi(String modelName, String text) throws IOException;
-
-  /**
-   * Calls the standard Vertex AI API for Google's native models (Gemini, Llama).
-   *
-   * <p>
-   * This method directly invokes the Vertex AI endpoint without routing logic. It's used for models that are hosted natively on Vertex AI
-   * platform.
-   * </p>
-   *
-   * <p>
-   * <b>Typical Models:</b> gemini-1.5-pro, gemini-1.5-flash, llama-3.1-405b
-   * </p>
-   *
-   * @param modelName
-   *          The native Vertex AI model name
-   * @param textPrompt
    *          The prompt text
-   * @return GenerationResult containing the response text and metadata
-   * @throws IOException
+   * @return Generated response text
+   * @throws ApiCallException
    *           If the API call fails
    */
-  GenerationResult callStandardVertexAi(String modelName, String textPrompt) throws IOException;
+  String callVertexAi(String modelName, String text) throws ApiCallException;
 
   /**
-   * Calls the Chat Completions API for MaaS (Model-as-a-Service) models.
+   * Calls the standard Vertex AI API for supported models.
    *
-   * <p>
-   * This method is used for third-party models integrated into Vertex AI through the Chat Completions API endpoint. These models require a
-   * provider prefix in the model identifier.
-   * </p>
-   *
-   * <p>
-   * <b>Supported Providers:</b> deepseek-ai, openai, google-openai, anthropic, etc.
-   * </p>
-   *
-   * <p>
-   * <b>Example Model Identifiers:</b>
-   * </p>
-   * <ul>
-   * <li>deepseek-ai/deepseek-chat</li>
-   * <li>openai/gpt-4o</li>
-   * <li>google/gemini-2.0-flash-exp (google-openai provider)</li>
-   * </ul>
+   * @param modelName
+   *          The model to use
+   * @param textPrompt
+   *          The prompt text
+   * @return GenerationResult containing the response and metadata
+   * @throws ApiCallException
+   *           If the API call fails
+   */
+  GenerationResult callStandardVertexAi(String modelName, String textPrompt) throws ApiCallException;
+
+  /**
+   * Calls the Chat Completions API for MaaS and third-party models.
    *
    * @param provider
-   *          The model provider identifier (e.g., "deepseek-ai", "openai")
+   *          The provider name (e.g., \"deepseek-ai\", \"openai\")
    * @param modelName
-   *          The model name without provider prefix
+   *          The model to use
    * @param textPrompt
    *          The prompt text
-   * @return GenerationResult containing the response text and metadata
-   * @throws IOException
+   * @return GenerationResult containing the response and metadata
+   * @throws ApiCallException
    *           If the API call fails
    */
-  GenerationResult callChatCompletionsApi(String provider, String modelName, String textPrompt) throws IOException;
+  GenerationResult callChatCompletionsApi(String provider, String modelName, String textPrompt) throws ApiCallException;
 }

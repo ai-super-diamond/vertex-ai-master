@@ -1,0 +1,185 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Auto-generated code. Do not edit.
+
+package com.google.genai.types;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.auto.value.AutoValue;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.genai.JsonSerializable;
+import java.util.Optional;
+
+/** The image generation configuration to be used in GenerateContentConfig. */
+@AutoValue
+@JsonDeserialize(builder = ImageConfig.Builder.class)
+public abstract class ImageConfig extends JsonSerializable {
+  /**
+   * Aspect ratio of the generated images. Supported values are "1:1", "2:3", "3:2", "3:4", "4:3",
+   * "9:16", "16:9", and "21:9".
+   */
+  @JsonProperty("aspectRatio")
+  public abstract Optional<String> aspectRatio();
+
+  /**
+   * Optional. Specifies the size of generated images. Supported values are `1K`, `2K`, `4K`. If not
+   * specified, the model will use default value `1K`.
+   */
+  @JsonProperty("imageSize")
+  public abstract Optional<String> imageSize();
+
+  /**
+   * Controls the generation of people. Supported values are: ALLOW_ALL, ALLOW_ADULT, ALLOW_NONE.
+   */
+  @JsonProperty("personGeneration")
+  public abstract Optional<String> personGeneration();
+
+  /** MIME type of the generated image. This field is not supported in Gemini API. */
+  @JsonProperty("outputMimeType")
+  public abstract Optional<String> outputMimeType();
+
+  /**
+   * Compression quality of the generated image (for ``image/jpeg`` only). This field is not
+   * supported in Gemini API.
+   */
+  @JsonProperty("outputCompressionQuality")
+  public abstract Optional<Integer> outputCompressionQuality();
+
+  /** Instantiates a builder for ImageConfig. */
+  @ExcludeFromGeneratedCoverageReport
+  public static Builder builder() {
+    return new AutoValue_ImageConfig.Builder();
+  }
+
+  /** Creates a builder with the same values as this instance. */
+  public abstract Builder toBuilder();
+
+  /** Builder for ImageConfig. */
+  @AutoValue.Builder
+  public abstract static class Builder {
+    /** For internal usage. Please use `ImageConfig.builder()` for instantiation. */
+    @JsonCreator
+    private static Builder create() {
+      return new AutoValue_ImageConfig.Builder();
+    }
+
+    /**
+     * Setter for aspectRatio.
+     *
+     * <p>aspectRatio: Aspect ratio of the generated images. Supported values are "1:1", "2:3",
+     * "3:2", "3:4", "4:3", "9:16", "16:9", and "21:9".
+     */
+    @JsonProperty("aspectRatio")
+    public abstract Builder aspectRatio(String aspectRatio);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder aspectRatio(Optional<String> aspectRatio);
+
+    /** Clears the value of aspectRatio field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearAspectRatio() {
+      return aspectRatio(Optional.empty());
+    }
+
+    /**
+     * Setter for imageSize.
+     *
+     * <p>imageSize: Optional. Specifies the size of generated images. Supported values are `1K`,
+     * `2K`, `4K`. If not specified, the model will use default value `1K`.
+     */
+    @JsonProperty("imageSize")
+    public abstract Builder imageSize(String imageSize);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder imageSize(Optional<String> imageSize);
+
+    /** Clears the value of imageSize field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearImageSize() {
+      return imageSize(Optional.empty());
+    }
+
+    /**
+     * Setter for personGeneration.
+     *
+     * <p>personGeneration: Controls the generation of people. Supported values are: ALLOW_ALL,
+     * ALLOW_ADULT, ALLOW_NONE.
+     */
+    @JsonProperty("personGeneration")
+    public abstract Builder personGeneration(String personGeneration);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder personGeneration(Optional<String> personGeneration);
+
+    /** Clears the value of personGeneration field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearPersonGeneration() {
+      return personGeneration(Optional.empty());
+    }
+
+    /**
+     * Setter for outputMimeType.
+     *
+     * <p>outputMimeType: MIME type of the generated image. This field is not supported in Gemini
+     * API.
+     */
+    @JsonProperty("outputMimeType")
+    public abstract Builder outputMimeType(String outputMimeType);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder outputMimeType(Optional<String> outputMimeType);
+
+    /** Clears the value of outputMimeType field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearOutputMimeType() {
+      return outputMimeType(Optional.empty());
+    }
+
+    /**
+     * Setter for outputCompressionQuality.
+     *
+     * <p>outputCompressionQuality: Compression quality of the generated image (for ``image/jpeg``
+     * only). This field is not supported in Gemini API.
+     */
+    @JsonProperty("outputCompressionQuality")
+    public abstract Builder outputCompressionQuality(Integer outputCompressionQuality);
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder outputCompressionQuality(Optional<Integer> outputCompressionQuality);
+
+    /** Clears the value of outputCompressionQuality field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearOutputCompressionQuality() {
+      return outputCompressionQuality(Optional.empty());
+    }
+
+    public abstract ImageConfig build();
+  }
+
+  /** Deserializes a JSON string to a ImageConfig object. */
+  @ExcludeFromGeneratedCoverageReport
+  public static ImageConfig fromJson(String jsonString) {
+    return JsonSerializable.fromJsonString(jsonString, ImageConfig.class);
+  }
+}

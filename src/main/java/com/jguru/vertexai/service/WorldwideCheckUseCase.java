@@ -1,7 +1,7 @@
 package com.jguru.vertexai.service;
 
 import com.jguru.vertexai.infrastructure.client.WorldwideAvailabilityClient;
-import com.jguru.vertexai.service.dto.AuthenticationConfig;
+import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
 import com.jguru.vertexai.utils.MarkdownReportGenerator;

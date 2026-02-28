@@ -1,0 +1,128 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Auto-generated code. Do not edit.
+
+package com.google.genai.types;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.auto.value.AutoValue;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.genai.JsonSerializable;
+import java.util.Optional;
+
+/**
+ * Tool config.
+ *
+ * <p>This config is shared for all tools provided in the request.
+ */
+@AutoValue
+@JsonDeserialize(builder = ToolConfig.Builder.class)
+public abstract class ToolConfig extends JsonSerializable {
+  /** Optional. Retrieval config. */
+  @JsonProperty("retrievalConfig")
+  public abstract Optional<RetrievalConfig> retrievalConfig();
+
+  /** Optional. Function calling config. */
+  @JsonProperty("functionCallingConfig")
+  public abstract Optional<FunctionCallingConfig> functionCallingConfig();
+
+  /** Instantiates a builder for ToolConfig. */
+  @ExcludeFromGeneratedCoverageReport
+  public static Builder builder() {
+    return new AutoValue_ToolConfig.Builder();
+  }
+
+  /** Creates a builder with the same values as this instance. */
+  public abstract Builder toBuilder();
+
+  /** Builder for ToolConfig. */
+  @AutoValue.Builder
+  public abstract static class Builder {
+    /** For internal usage. Please use `ToolConfig.builder()` for instantiation. */
+    @JsonCreator
+    private static Builder create() {
+      return new AutoValue_ToolConfig.Builder();
+    }
+
+    /**
+     * Setter for retrievalConfig.
+     *
+     * <p>retrievalConfig: Optional. Retrieval config.
+     */
+    @JsonProperty("retrievalConfig")
+    public abstract Builder retrievalConfig(RetrievalConfig retrievalConfig);
+
+    /**
+     * Setter for retrievalConfig builder.
+     *
+     * <p>retrievalConfig: Optional. Retrieval config.
+     */
+    @CanIgnoreReturnValue
+    public Builder retrievalConfig(RetrievalConfig.Builder retrievalConfigBuilder) {
+      return retrievalConfig(retrievalConfigBuilder.build());
+    }
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder retrievalConfig(Optional<RetrievalConfig> retrievalConfig);
+
+    /** Clears the value of retrievalConfig field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearRetrievalConfig() {
+      return retrievalConfig(Optional.empty());
+    }
+
+    /**
+     * Setter for functionCallingConfig.
+     *
+     * <p>functionCallingConfig: Optional. Function calling config.
+     */
+    @JsonProperty("functionCallingConfig")
+    public abstract Builder functionCallingConfig(FunctionCallingConfig functionCallingConfig);
+
+    /**
+     * Setter for functionCallingConfig builder.
+     *
+     * <p>functionCallingConfig: Optional. Function calling config.
+     */
+    @CanIgnoreReturnValue
+    public Builder functionCallingConfig(
+        FunctionCallingConfig.Builder functionCallingConfigBuilder) {
+      return functionCallingConfig(functionCallingConfigBuilder.build());
+    }
+
+    @ExcludeFromGeneratedCoverageReport
+    abstract Builder functionCallingConfig(Optional<FunctionCallingConfig> functionCallingConfig);
+
+    /** Clears the value of functionCallingConfig field. */
+    @ExcludeFromGeneratedCoverageReport
+    @CanIgnoreReturnValue
+    public Builder clearFunctionCallingConfig() {
+      return functionCallingConfig(Optional.empty());
+    }
+
+    public abstract ToolConfig build();
+  }
+
+  /** Deserializes a JSON string to a ToolConfig object. */
+  @ExcludeFromGeneratedCoverageReport
+  public static ToolConfig fromJson(String jsonString) {
+    return JsonSerializable.fromJsonString(jsonString, ToolConfig.class);
+  }
+}
