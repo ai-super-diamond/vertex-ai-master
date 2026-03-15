@@ -210,12 +210,15 @@ git push origin --delete feature/your-feature-name
 - Worldwide Availability: `src/main/java/com/jguru/vertexai/client/WorldwideAvailabilityClient.java`
 
 *DTOs:*
-- `src/main/java/com/jguru/vertexai/service/dto/AuthenticationConfig.java`
-- `src/main/java/com/jguru/vertexai/service/dto/AuthenticationType.java`
-- `src/main/java/com/jguru/vertexai/service/dto/GenerationRequest.java`
-- `src/main/java/com/jguru/vertexai/service/dto/GenerationResult.java`
-- `src/main/java/com/jguru/vertexai/service/dto/RegionCheckRequest.java`
-- `src/main/java/com/jguru/vertexai/service/dto/RegionCheckResult.java`
+- Domain layer (`src/main/java/com/jguru/vertexai/domain/dto/`):
+  - `AuthenticationConfig.java`
+  - `AuthenticationType.java`
+  - `GenerationResult.java`
+- Service layer (`src/main/java/com/jguru/vertexai/service/dto/`):
+  - `GenerationRequest.java`
+  - `RegionCheckRequest.java`
+  - `RegionCheckResult.java`
+  - `ErrorType.java`
 
 *Utilities:*
 - Helper methods: `src/main/java/com/jguru/vertexai/utils/VertexUtils.java`
