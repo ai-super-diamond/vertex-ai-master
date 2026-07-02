@@ -1,321 +1,102 @@
 # AGENTS.md
 
-Instructions for AI coding agents working on this Java CLI project for Google Vertex AI and Gemini API.
+Repository-specific guidance for `vertex-ai-master`.
 
-> **What is this file?**  
-> AGENTS.md is a standard format for guiding coding agents. Think of it as a README for agents - it contains build steps, test commands, and conventions that agents need to work effectively with this project. [Learn more](https://agents.md)
+Follow the shared AGENTS.md format at <https://agents.md> for the general
+model of how agent instructions work. Keep this file focused on the details
+that matter for this repository.
 
 ## Project Overview
 
-**Tech Stack:**
-- Java 25 with GraalVM (use `--release 25` flag, not `-source/-target`)
-- Maven 3.x build tool (`mvn` must be on `PATH`)
-- Picocli 4.7.7 for CLI framework
-- Google GenAI SDK 1.60.0 for Vertex AI integration
-- JUnit Jupiter 6.1.1 for testing
-- GraalVM (optional) for native compilation — native builds require `JAVA_HOME` to point at the GraalVM JDK itself, not a plain JDK with `GRAALVM_HOME` set separately
+- Java 25 with GraalVM
+- Maven 3.x
+- Picocli 4.7.7
+- Google GenAI SDK 1.60.0
+- JUnit Jupiter 6.1.1
 
-**Purpose:** Command-line tool to interact with Google's Vertex AI generative models using either API keys or service account authentication.
+This is a CLI for interacting with Google Vertex AI and Gemini models using
+either API keys or service account authentication.
 
-**Architecture:** Clean 3-tier layered architecture:
-1. **Presentation Layer (CLI):** `VertexAiMasterMain` - Picocli-based command-line interface
-2. **Service Layer:** `VertexAiService` / `VertexAiServiceImpl` - Business logic and orchestration
-3. **Client Layer:** `VertexAiClient` - Direct API communication with Google Cloud
-4. **DTOs:** Data transfer objects with Builder pattern (`AuthenticationConfig`, `GenerationRequest`, `GenerationResult`, `RegionCheckRequest`, `RegionCheckResult`)
+Architecture:
+
+- Presentation layer: `VertexAiMasterMain`
+- Service layer: `VertexAiService` / `VertexAiServiceImpl`
+- Client layer: `VertexAiClient`
+- DTOs use builder-based value objects under `domain/dto` and `service/dto`
 
 ## Build Commands
 
 ```bash
-# Clean build
 mvn clean compile
-
-# Package shaded JAR
 mvn clean package
-
-# Run JAR directly
 java -jar target/vertex-1.0.1.jar --help
-
-# Build the shaded JAR and stage it as bin/vertex-latest.jar
-.\bin\build-jar.cmd    # Windows
-./bin/build-jar.sh     # Linux/macOS
-
-# Build native executable (requires GraalVM + Visual Studio 2022)
-.\bin\build-exe.cmd
-
-# Sanity-check the local toolchain (Maven, Java, jar, properties, key, results dir)
-.\bin\doctor.cmd        # Windows
-./bin/doctor.sh         # Linux/macOS
 ```
 
-## Testing Instructions
+Windows and cross-platform helper scripts:
 
-**Run all tests:**
+- `.\bin\build-jar.cmd` / `./bin/build-jar.sh`
+- `.\bin\build-exe.cmd`
+- `.\bin\doctor.cmd` / `./bin/doctor.sh`
+
+## Testing
+
 ```bash
 mvn test
-```
-
-**Run integration tests (requires valid service account key):**
-```bash
 mvn test "-Drun.integration.tests=true"
-```
-
-**Service account key location for integration tests:**
-Path is read from the `test.project.sa.key.file` property in the test properties file (see `VertexAiMasterMainTest`), not hardcoded.
-
-**Run specific test:**
-```bash
 mvn test -Dtest=VertexAiMasterMainTest#testVertexAiWithServiceAccountKey
 ```
 
-**Test files:**
-- Working SA key: `keys\sa_key.json`
-- Expired SA key: `keys\expired.json`
-- Main test class: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
+Integration tests require a valid service account key. The key path comes from
+the `test.project.sa.key.file` property in the test properties file, not from a
+hardcoded path.
 
-**Important:** All tests must pass before committing. Integration tests validate:
-1. Service account authentication works
-2. Application does NOT fall back to ADC when explicit `--sa-key-file` is provided
-3. Invalid/expired keys fail with proper error messages
+Relevant test assets:
 
-## Code Style Guidelines
+- `keys\sa_key.json`
+- `keys\expired.json`
+- `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
 
-**Formatting:** This project uses the Eclipse formatter via Spotless. All style rules are defined in `eclipse-formatter.xml`.
+## Formatting
+
+Use Spotless with the Eclipse formatter.
 
 ```bash
-# Auto-format all code (MANDATORY before committing)
 mvn spotless:apply
-
-# Check if code is formatted
 mvn spotless:check
 ```
 
-**Note:** The formatter handles all style rules (indentation, line length, imports, whitespace). Just run `spotless:apply` before committing.
+Run formatting before finishing any code change that touches Java sources.
 
-## Pre-commit Checklist (MANDATORY)
+## Project Conventions
 
-**⚠️ CRITICAL: Complete ALL steps before every commit - NO EXCEPTIONS**
+- Use `--release 25` for Java compilation.
+- Native builds require `JAVA_HOME` to point at the GraalVM JDK itself.
+- Keep the three-tier layering intact when making changes.
+- `VertexAiClient` must load explicit service account keys directly and must
+  not fall back to ADC when `--sa-key-file` is provided.
+- Model aliases live in `src/main/resources/models.properties`.
+- Standard Vertex AI SDK routing is for Gemini models without a `.provider`
+  property; chat-completions routing is used for MaaS models with one.
 
-**CI Enforcement:** This project enforces formatting in CI pipelines. The `spotless:check` goal runs during the Maven validate phase and will fail the build if code is not properly formatted. Unformatted code will be rejected by CI.
+## Region Checks
 
-1. ✅ **RUN TESTS FIRST**: `mvn clean test` - **ALL tests MUST pass** (0 failures, 0 errors)
-2. ✅ **FORMAT CODE**: `mvn spotless:apply` to format all code
-   - **CI ENFORCED**: `spotless:check` runs in Maven validate phase
-   - Unformatted code will cause CI failure
-3. ✅ **VERIFY BUILD**: No compilation errors or warnings
-4. ✅ No `.class` files or other build artifacts in commit
-5. ✅ No sensitive data (API keys, service account files) in commit
-6. ✅ Commit message follows 50-character subject limit
-7. ✅ Changes are focused and atomic (one logical change per commit)
+- `--check-all-regions` / `-car` checks a model across a cluster
+- `--worldwide` / `-w` checks the model across all worldwide GCP regions
+- Cluster values map to `<CLUSTER>_REGIONS` entries in `regions.properties`
+- `GLOBAL` is a single pseudo-region for models served only on the global
+  endpoint
 
-**⚠️ WARNING: NEVER commit without running tests. Test failures indicate broken code.**
-**⚠️ WARNING: NEVER skip formatting. Unformatted code will be rejected by CI.**
+## Security
 
-## GitHub Workflow
-
-**Clone the repository:**
-```bash
-git clone https://github.com/YOUR_USERNAME/vertex-ai-master.git
-cd vertex-ai-master
-```
-
-**Before starting work:**
-```bash
-# Ensure you're on main and up-to-date
-git checkout main
-git pull origin main
-```
-
-**Create a feature branch:**
-```bash
-# Use descriptive branch names: feature/description or fix/description
-git checkout -b feature/your-feature-name
-```
-
-**During development:**
-```bash
-# MANDATORY BEFORE COMMIT: Format code
-mvn spotless:apply
-
-# MANDATORY BEFORE COMMIT: Run ALL tests - must pass 100%
-mvn clean test
-
-# Only after formatting AND tests pass:
-git add -A
-
-# Commit with concise message (max 50 chars for subject)
-git commit -m "Add feature: description"
-
-# For detailed commits, use body:
-git commit -m "Add feature: description" -m "Detailed explanation of changes, why they were needed, and any breaking changes."
-```
-
-**Commit message guidelines:**
-- Subject line: max 50 characters, imperative mood ("Add", "Fix", "Update")
-- Separate subject from body with blank line
-- Body: wrap at 72 characters, explain what and why (not how)
-- Examples:
-  - `"Add Spotless formatting toolchain"`
-  - `"Fix ADC fallback prevention in VertexAiClient"`
-  - `"Update dependencies to latest versions"`
-
-**Push changes:**
-```bash
-# Push feature branch to remote
-git push origin feature/your-feature-name
-
-# If branch already exists and you need to force push (use carefully)
-git push --force-with-lease origin feature/your-feature-name
-```
-
-**Create Pull Request:**
-1. Go to GitHub repository
-2. Click "New Pull Request"
-3. Select your feature branch
-4. Title: Same as commit message or descriptive summary
-5. Description: Explain changes, testing done, any breaking changes
-6. Wait for CI checks to pass before requesting review
-
-**Update branch with main:**
-```bash
-# If main has advanced while working on feature
-git checkout main
-git pull origin main
-git checkout feature/your-feature-name
-git rebase main
-
-# Resolve any conflicts, then continue
-git rebase --continue
-
-# Force push rebased branch
-git push --force-with-lease origin feature/your-feature-name
-```
-
-**After PR is merged:**
-```bash
-# Switch back to main
-git checkout main
-git pull origin main
-
-# Delete local feature branch
-git branch -d feature/your-feature-name
-
-# Delete remote feature branch (if not auto-deleted)
-git push origin --delete feature/your-feature-name
-```
+- Never commit service account keys or other secrets.
+- Test keys under `keys/` are for testing only.
+- Redact credentials from logs and error messages.
 
 ## Key Files
 
-*Presentation Layer:*
 - Main entry: `src/main/java/com/jguru/vertexai/VertexAiMasterMain.java`
-
-*Service Layer:*
-- Interface: `src/main/java/com/jguru/vertexai/service/VertexAiService.java`
-- Implementation: `src/main/java/com/jguru/vertexai/service/VertexAiServiceImpl.java`
-
-*Client Layer:*
-- API client: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
-- Chat Completions: `src/main/java/com/jguru/vertexai/client/ChatCompletionsClient.java`
-- Worldwide Availability: `src/main/java/com/jguru/vertexai/client/WorldwideAvailabilityClient.java`
-
-*DTOs:*
-- Domain layer (`src/main/java/com/jguru/vertexai/domain/dto/`):
-  - `AuthenticationConfig.java`
-  - `AuthenticationType.java`
-  - `GenerationResult.java`
-- Service layer (`src/main/java/com/jguru/vertexai/service/dto/`):
-  - `GenerationRequest.java`
-  - `RegionCheckRequest.java`
-  - `RegionCheckResult.java`
-  - `ErrorType.java`
-
-*Utilities:*
-- Helper methods: `src/main/java/com/jguru/vertexai/utils/VertexUtils.java`
-
-*Configuration:*
-- Model aliases: `src/main/resources/models.properties`
-
-*Tests:*
-- Main test class: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
-- Worldwide availability tests: `src/test/java/com/jguru/vertexai/client/WorldwideAvailabilityClientTest.java`
-
-## Model Configuration
-
-- Models are aliased in `models.properties` (e.g., `gemini.pro=gemini-3.1-pro-preview`)
-- Anthropic models are included by default (e.g., `anthropic.sonnet5`, `anthropic.opus48`)
-- MaaS models require `.provider` property (e.g., `openai.gpt.oss.120b.provider=openai`); several MaaS entries (Llama, DeepSeek, Qwen, MiniMax, Moonshot, Z.AI) are commented out by default
-- Service layer resolves aliases via `VertexAiService.resolveModelName()`
-- Use `--model-name` or `-m` flag to specify model alias or full name
-
-## Authentication Modes
-
-**Authentication modes (via `AuthenticationType` enum):**
-1. **API_KEY:** `--api-key YOUR_KEY` (Gemini API direct access)
-2. **SERVICE_ACCOUNT_EXPLICIT_KEY:** `--sa-key-file path/to/key.json` (Vertex AI with explicit credentials)
-3. **SERVICE_ACCOUNT_ADC:** Application Default Credentials (fallback when no `--sa-key-file` provided)
-
-**Authentication flow:**
-- CLI creates `AuthenticationConfig` via builder pattern
-- Service layer creates `GenerationRequest` with auth config
-- Client layer (`VertexAiClient`) handles credential loading and API routing
-
-**CRITICAL: ADC Fallback Prevention**
-When `--sa-key-file` is explicitly provided, the application MUST:
-- Load credentials via `GoogleCredentials.fromStream(new FileInputStream(path))`
-- Use `.credentials(credentials)` in client builder
-- Fail immediately if key is invalid (no ADC fallback)
-- This is enforced in `VertexAiClient.java` constructor logic
-
-## Model Routing
-
-**Model routing (automatic):**
-- **Standard Vertex AI SDK:** Gemini models (no `.provider` property)
-- **Chat Completions API:** MaaS models with `.provider` property (currently Anthropic, OpenAI; DeepSeek/Qwen/MiniMax/Moonshot/Z.AI are commented out in `models.properties` but supported)
-- Client detects provider and routes accordingly
-
-## Region Check Features
-
-**Region check feature:**
-- CLI flag: `--check-all-regions` or `-car`
-- Cluster flag: `--cluster` or `-c` (US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA, GLOBAL)
-- Clusters resolve to a `<CLUSTER>_REGIONS` entry in `regions.properties`; `GLOBAL` is a single pseudo-region for models only served on the global endpoint
-- Tests model across all regions in specified cluster
-- Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
-- Example: `vertex.exe -car -c US -m gemini.pro --location us-central1 --sa-key-file key.json`
-- Helper scripts: `bin/test-all-eu.cmd`/`.sh`, `bin/test-all-us.cmd`/`.sh`, `bin/test-global.cmd`/`.sh`, `bin/debug-all-eu.cmd`/`.sh`, `bin/debug-all-us.cmd`/`.sh`
-
-**Worldwide region check feature:**
-- CLI flag: `--worldwide` or `-w`
-- Tests model across all 42 worldwide GCP regions
-- Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
-- Example: `vertex.exe -w -m gemini.pro --location us-central1 --sa-key-file key.json`
-- Helper script: `bin/test-worldwide.cmd`/`.sh`
-
-## Security Considerations
-
-- Never commit service account keys to the repository
-- Keys are in `.gitignore` and stored in `c:\java\backup\GCP\Vertex\`
-- Test keys in `keys/` directory are for testing only
-- Expired keys are used to verify proper error handling
-- Redact credentials from logs and error messages
-
-## MCP Tool Integration (Planned)
-
-**Available MCP servers** (configured in `c:\java\mcp-configs\qoder-mcp.json`):
-- **serper**: Web search for current information ([marcopesani/mcp-server-serper](https://github.com/marcopesani/mcp-server-serper))
-- **context7**: Library documentation lookup ([upstash/context7](https://github.com/upstash/context7))
-- **exa**: Advanced search and context retrieval ([exa-labs/exa-mcp-server](https://github.com/exa-labs/exa-mcp-server))
-- **sequential-thinking**: Complex task orchestration ([modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking))
-- **desktop-commander**: Desktop automation and system operations ([wonderwhy-er/DesktopCommanderMCP](https://github.com/wonderwhy-er/DesktopCommanderMCP))
-
-**Tool selection rubric:**
-- Use `serper` for time-sensitive facts, current events
-- Use `context7` for API docs, library references
-- Use `exa` for deep research, synthesizing multiple sources
-- Use `sequential-thinking` for multi-step reasoning tasks
-- Use `desktop-commander` for desktop automation, file operations, system commands
-
-**Integration status:** MCP tools are not yet wired into the CLI. Planned implementation:
-1. Add `ToolClient` abstraction for MCP server communication
-2. Add `--use-mcp serper|context7|exa` CLI flag
-3. Implement retry/backoff for tool calls
-4. Add structured logging for tool inputs/outputs
+- Service API: `src/main/java/com/jguru/vertexai/service/VertexAiService.java`
+- Service impl: `src/main/java/com/jguru/vertexai/service/VertexAiServiceImpl.java`
+- Client: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
+- Model config: `src/main/resources/models.properties`
+- Region tests: `src/test/java/com/jguru/vertexai/client/WorldwideAvailabilityClientTest.java`
