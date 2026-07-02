@@ -47,7 +47,7 @@ build/
 .vscode/
 
 ### Security - Service Account Keys ###
-keys/sa-key.json
+keys/sa_key.json
 *.json
 !pom.json
 !package.json
