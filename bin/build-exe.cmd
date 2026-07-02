@@ -24,8 +24,13 @@ echo.
 REM Change to project root and run Maven
 pushd "%PROJECT_ROOT%"
 
+REM Native builds require JAVA_HOME to point at the GraalVM JDK itself,
+REM not just a plain JDK with GRAALVM_HOME set separately.
+if defined GRAALVM_HOME set JAVA_HOME=%GRAALVM_HOME%
+
+echo Using JAVA_HOME=%JAVA_HOME%
 echo Running Maven native build...
-d:\java\maven\bin\mvn -Pnative package -Djansi.passthrough=true -Dstyle.color=always -DskipTests=true --errors --update-snapshots -T 4
+call mvn -Pnative package -Djansi.passthrough=true -Dstyle.color=always -DskipTests=true --errors --update-snapshots -T 4
 
 REM Check if Maven succeeded
 if errorlevel 1 (
