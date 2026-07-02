@@ -7,8 +7,8 @@ A powerful command-line interface (CLI) for interacting with Google's Vertex AI 
 Vertex AI Master CLI provides a unified interface to experiment with and test various Large Language Models (LLMs) hosted on Google Cloud Vertex AI. 
 
 **Key Features:**
-- **Dual API Support:** Seamlessly interact with the standard Vertex AI SDK (Gemini, Llama) and the Chat Completions API (DeepSeek, Qwen via MaaS).
-- **Availability Testing:** Verify model availability across 40+ GCP regions, specific clusters (US, EU), or worldwide.
+- **Multi-Provider Support:** Interact with Vertex AI models (Gemini), Anthropic models (Claude), and MaaS offerings via Chat Completions API.
+- **Availability Testing:** Verify model availability across 40+ GCP regions, specific clusters (US, EU, Asia, Africa, Canada, South America, or Global), or worldwide.
 - **Model Alias System:** Use short names for complex model IDs via a flexible `models.properties` configuration.
 - **Advanced Authentication:** Supports API Keys, Service Account JSON files, and Application Default Credentials (ADC).
 - **High Performance:** Optimized for Windows with optional **GraalVM Native Image** support for near-instant startup.
@@ -19,12 +19,12 @@ Vertex AI Master CLI provides a unified interface to experiment with and test va
 - **Language:** Java 25
 - **CLI Framework:** [Picocli](https://picocli.info/) 4.7.7
 - **SDKs:** 
-  - Google Cloud GenAI SDK 1.32.0
-  - Google Auth Library 1.40.0
+  - Google Cloud GenAI SDK 1.60.0
+  - Google Auth Library 1.48.0
 - **Build System:** Maven 3.9+
 - **Native Image:** GraalVM (for `vertex.exe`)
 - **Logging:** SLF4J + Logback
-- **Serialization:** GSON 2.13.2
+- **Serialization:** GSON 2.14.0
 
 ## 📋 Prerequisites
 
@@ -47,7 +47,7 @@ cd vertex-ai-master
 mvn clean package -DskipTests
 ```
 
-The resulting JAR will be located at `target/vertex-0.0.1-SNAPSHOT.jar` (or similar, depending on the version).
+The resulting JAR will be located at `target/vertex-1.0.1.jar`.
 
 ### Building the Native Executable (Windows)
 
@@ -64,11 +64,11 @@ This script runs the Maven native profile and moves the generated `vertex.exe` t
 ### Basic Commands
 
 ```powershell
-# Using the native executable
-.\bin\vertex.exe --project-id YOUR_PROJECT --location us-central1 -m gemini.pro "What is the capital of France?"
-
 # Using the Java JAR directly
-java -jar target/vertex-0.0.1-SNAPSHOT.jar --project-id YOUR_PROJECT -m gemini.pro "Hello!"
+java -jar target/vertex-1.0.1.jar --project-id YOUR_PROJECT --location us-central1 -m gemini.pro "What is the capital of France?"
+
+# Or using the native executable (if built)
+.\bin\vertex.exe --project-id YOUR_PROJECT --location us-central1 -m gemini.pro "What is the capital of France?"
 ```
 
 ### Authentication Modes
@@ -79,7 +79,7 @@ java -jar target/vertex-0.0.1-SNAPSHOT.jar --project-id YOUR_PROJECT -m gemini.p
     ```
 2.  **Service Account Key:**
     ```powershell
-    .\bin\vertex.exe --project-id PROJECT --sa-key-file keys/sa-key.json -m gemini.pro "Analyze this code."
+    java -jar target/vertex-1.0.1.jar --project-id PROJECT --sa-key-file keys/sa_key.json -m gemini.pro "Analyze this code."
     ```
 3.  **Application Default Credentials (ADC):**
     ```powershell
@@ -89,14 +89,19 @@ java -jar target/vertex-0.0.1-SNAPSHOT.jar --project-id YOUR_PROJECT -m gemini.p
 
 ### Availability & Region Checks
 
-**Check a model across a specific cluster (US/EU/Global):**
+**Check a model across a specific cluster (US/EU/ASIA/MIDDLE_EAST/AFRICA/CANADA/SOUTH_AMERICA/GLOBAL):**
 ```powershell
-.\bin\vertex.exe --project-id PROJECT --check-all-regions --cluster US -m deepseek.r1 "Test"
+java -jar target/vertex-1.0.1.jar --project-id PROJECT --check-all-regions --cluster US -m gemini.pro "Test"
 ```
 
-**Worldwide availability check:**
+**Worldwide availability check (all 42+ regions):**
 ```powershell
-.\bin\vertex.exe --project-id PROJECT --worldwide -m gemini.pro "Connectivity test"
+java -jar target/vertex-1.0.1.jar --project-id PROJECT --worldwide -m gemini.pro "Connectivity test"
+```
+
+**Global endpoint check (models served only on the global endpoint):**
+```powershell
+java -jar target/vertex-1.0.1.jar --project-id PROJECT --check-all-regions --cluster GLOBAL -m anthropic.sonnet5 "Test"
 ```
 
 **Debug Mode:**
@@ -106,15 +111,15 @@ Add `--debug` to see full request/response details and internal routing logic.
 
 | Script | Path | Description |
 | :--- | :--- | :--- |
-| `rebuild.cmd` | `/` | Full clean build and basic smoke test. |
+| `build-jar.cmd` / `build-jar.sh` | `bin/` | Build the shaded JAR and stage it as `bin/vertex-latest.jar`. |
 | `build-exe.cmd` | `bin/` | Compiles the native Windows executable using GraalVM. |
-| `vert.cmd` | `bin/` | Wrapper to run the JAR with a local `models.properties`. |
-| `test-all-us.cmd` | `bin/` | Automated availability test for all models in US regions. |
-| `test-all-eu.cmd` | `bin/` | Automated availability test for all models in EU regions. |
-| `debug-all-us.cmd`| `bin/` | Same as `test-all-us.cmd` but with verbose debug output. |
-| `debug-all-eu.cmd`| `bin/` | Same as `test-all-eu.cmd` but with verbose debug output. |
-| `run-dry-new-versions.cmd` | `/` | Dry run for dependency updates via OpenRewrite. |
-| `run-apply-new-versions.cmd` | `/` | Applies dependency updates via OpenRewrite. |
+| `doctor.cmd` / `doctor.sh` | `bin/` | Sanity-check the local toolchain (Maven, Java, jar, properties, key). |
+| `test-all-us.cmd` / `test-all-us.sh` | `bin/` | Automated availability test for all models in US regions. |
+| `test-all-eu.cmd` / `test-all-eu.sh` | `bin/` | Automated availability test for all models in EU regions. |
+| `test-global.cmd` / `test-global.sh` | `bin/` | Automated availability test for all models on the global endpoint. |
+| `test-worldwide.cmd` / `test-worldwide.sh` | `bin/` | Automated worldwide availability test (all 42+ regions). |
+| `debug-all-us.cmd` / `debug-all-us.sh` | `bin/` | US region test with verbose debug output. |
+| `debug-all-eu.cmd` / `debug-all-eu.sh` | `bin/` | EU region test with verbose debug output. |
 
 ## ⚙️ Configuration
 
@@ -124,13 +129,20 @@ Model routing and aliases are defined in `src/main/resources/models.properties`.
 
 Example configuration:
 ```properties
-# Standard Vertex AI Model
-gemini.pro=gemini-1.5-pro-001
-gemini.pro.region=us-central1
+# Google Gemini Models (Vertex AI SDK)
+gemini.pro=gemini-3.1-pro-preview
+gemini.flash=gemini-3.5-flash
 
-# Model-as-a-Service (MaaS) Configuration
-deepseek.r1=deepseek-r1-maas
-deepseek.r1.provider=deepseek-ai
+# Anthropic Models (Chat Completions API)
+anthropic.sonnet5=claude-sonnet-5@default
+anthropic.sonnet5.provider=anthropic
+
+anthropic.opus48=claude-opus-4-8@default
+anthropic.opus48.provider=anthropic
+
+# Model-as-a-Service (MaaS) Configuration (example; others commented out)
+openai.gpt.oss.120b=gpt-oss-120b-maas
+openai.gpt.oss.120b.provider=openai
 ```
 
 ## 🌐 Environment Variables
@@ -188,4 +200,4 @@ This tool is compatible with MCP clients.
 TODO: Specify license (e.g., Apache-2.0).
 
 ---
-*Last updated: 2026-02-27*
+*Last updated: 2026-07-02*
