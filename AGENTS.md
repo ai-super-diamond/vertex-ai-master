@@ -280,14 +280,14 @@ When `--sa-key-file` is explicitly provided, the application MUST:
 - Clusters resolve to a `<CLUSTER>_REGIONS` entry in `regions.properties`; `GLOBAL` is a single pseudo-region for models only served on the global endpoint
 - Tests model across all regions in specified cluster
 - Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
-- Example: `vertex.exe -car -c US -m gemini.pro --project-id PROJECT --location us-central1 --sa-key-file key.json`
+- Example: `vertex.exe -car -c US -m gemini.pro --location us-central1 --sa-key-file key.json`
 - Helper scripts: `bin/test-all-eu.cmd`/`.sh`, `bin/test-all-us.cmd`/`.sh`, `bin/test-global.cmd`/`.sh`, `bin/debug-all-eu.cmd`/`.sh`, `bin/debug-all-us.cmd`/`.sh`
 
 **Worldwide region check feature:**
 - CLI flag: `--worldwide` or `-w`
 - Tests model across all 42 worldwide GCP regions
 - Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
-- Example: `vertex.exe -w -m gemini.pro --project-id PROJECT --location us-central1 --sa-key-file key.json`
+- Example: `vertex.exe -w -m gemini.pro --location us-central1 --sa-key-file key.json`
 - Helper script: `bin/test-worldwide.cmd`/`.sh`
 
 ## Security Considerations

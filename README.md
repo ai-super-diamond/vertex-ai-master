@@ -65,10 +65,10 @@ This script runs the Maven native profile and moves the generated `vertex.exe` t
 
 ```powershell
 # Using the Java JAR directly
-java -jar target/vertex-1.0.1.jar --project-id YOUR_PROJECT --location us-central1 -m gemini.pro "What is the capital of France?"
+java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --location us-central1 -m gemini.pro "What is the capital of France?"
 
 # Or using the native executable (if built)
-.\bin\vertex.exe --project-id YOUR_PROJECT --location us-central1 -m gemini.pro "What is the capital of France?"
+.\bin\vertex.exe --sa-key-file keys\sa_key.json --location us-central1 -m gemini.pro "What is the capital of France?"
 ```
 
 ### Authentication Modes
@@ -79,29 +79,29 @@ java -jar target/vertex-1.0.1.jar --project-id YOUR_PROJECT --location us-centra
     ```
 2.  **Service Account Key:**
     ```powershell
-    java -jar target/vertex-1.0.1.jar --project-id PROJECT --sa-key-file keys/sa_key.json -m gemini.pro "Analyze this code."
+    java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json -m gemini.pro "Analyze this code."
     ```
 3.  **Application Default Credentials (ADC):**
     ```powershell
     # Automatically uses credentials from 'gcloud auth application-default login'
-    .\bin\vertex.exe --project-id PROJECT -m gemini.pro "Prompt"
+    .\bin\vertex.exe --location us-central1 -m gemini.pro "Prompt"
     ```
 
 ### Availability & Region Checks
 
 **Check a model across a specific cluster (US/EU/ASIA/MIDDLE_EAST/AFRICA/CANADA/SOUTH_AMERICA/GLOBAL):**
 ```powershell
-java -jar target/vertex-1.0.1.jar --project-id PROJECT --check-all-regions --cluster US -m gemini.pro "Test"
+java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --check-all-regions --cluster US -m gemini.pro "Test"
 ```
 
 **Worldwide availability check (all 42+ regions):**
 ```powershell
-java -jar target/vertex-1.0.1.jar --project-id PROJECT --worldwide -m gemini.pro "Connectivity test"
+java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --worldwide -m gemini.pro "Connectivity test"
 ```
 
 **Global endpoint check (models served only on the global endpoint):**
 ```powershell
-java -jar target/vertex-1.0.1.jar --project-id PROJECT --check-all-regions --cluster GLOBAL -m anthropic.sonnet5 "Test"
+java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --check-all-regions --cluster GLOBAL -m anthropic.sonnet5 "Test"
 ```
 
 **Debug Mode:**
