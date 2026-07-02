@@ -1,11 +1,3 @@
-# AGENTS.md
-
-Repository-specific guidance for `vertex-ai-master`.
-
-Follow the shared AGENTS.md format at <https://agents.md> for the general
-model of how agent instructions work. Keep this file focused on the details
-that matter for this repository.
-
 ## Project Overview
 
 - Java 25 with GraalVM
