@@ -6,7 +6,7 @@ set PROMPT=200+200*99=?
 set MODELS_FILE=models.properties
 
 echo ========================================
-echo Testing All Models in EU Regions
+echo Testing All Models on Global Endpoint
 echo ========================================
 echo.
 echo Project: %PROJECT%
@@ -16,13 +16,13 @@ echo.
 echo Using model file: %MODELS_FILE%
 echo.
 
-REM Test all models using the -model-file parameter
+REM Test all models using the -model-file parameter, global endpoint only
 echo ========================================
 echo Testing all models from file
 echo ========================================
 echo.
 
-java -jar "%~dp0vertex-latest.jar" --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster EU -model-file %MODELS_FILE% --text "%PROMPT%"
+java -jar "%~dp0vertex-latest.jar" --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster GLOBAL -model-file %MODELS_FILE% --text "%PROMPT%"
 
 echo.
 echo ========================================
