@@ -9,11 +9,11 @@ Instructions for AI coding agents working on this Java CLI project for Google Ve
 
 **Tech Stack:**
 - Java 25 with GraalVM (use `--release 25` flag, not `-source/-target`)
-- Maven 3.x build tool (located at `d:\java\maven\bin\mvn.cmd`)
+- Maven 3.x build tool (`mvn` must be on `PATH`)
 - Picocli 4.7.7 for CLI framework
-- Google GenAI SDK 1.26.0 for Vertex AI integration
-- JUnit Jupiter 5.12.1 for testing
-- GraalVM (optional) for native compilation
+- Google GenAI SDK 1.60.0 for Vertex AI integration
+- JUnit Jupiter 6.1.1 for testing
+- GraalVM (optional) for native compilation — native builds require `JAVA_HOME` to point at the GraalVM JDK itself, not a plain JDK with `GRAALVM_HOME` set separately
 
 **Purpose:** Command-line tool to interact with Google's Vertex AI generative models using either API keys or service account authentication.
 
@@ -27,40 +27,48 @@ Instructions for AI coding agents working on this Java CLI project for Google Ve
 
 ```bash
 # Clean build
-d:\java\maven\bin\mvn.cmd clean compile
+mvn clean compile
 
 # Package shaded JAR
-d:\java\maven\bin\mvn.cmd clean package
+mvn clean package
 
 # Run JAR directly
-java -jar target/demo-0.0.1-SNAPSHOT.jar --help
+java -jar target/vertex-1.0.1.jar --help
+
+# Build the shaded JAR and stage it as bin/vertex-latest.jar
+.\bin\build-jar.cmd    # Windows
+./bin/build-jar.sh     # Linux/macOS
 
 # Build native executable (requires GraalVM + Visual Studio 2022)
 .\bin\build-exe.cmd
+
+# Sanity-check the local toolchain (Maven, Java, jar, properties, key, results dir)
+.\bin\doctor.cmd        # Windows
+./bin/doctor.sh         # Linux/macOS
 ```
 
 ## Testing Instructions
 
 **Run all tests:**
 ```bash
-d:\java\maven\bin\mvn.cmd test
+mvn test
 ```
 
 **Run integration tests (requires valid service account key):**
 ```bash
-d:\java\maven\bin\mvn.cmd test "-Drun.integration.tests=true"
+mvn test "-Drun.integration.tests=true"
 ```
 
 **Service account key location for integration tests:**
-`c:\java\backup\GCP\Vertex\skorec.json`
+Path is read from the `test.project.sa.key.file` property in the test properties file (see `VertexAiMasterMainTest`), not hardcoded.
 
 **Run specific test:**
 ```bash
-d:\java\maven\bin\mvn.cmd test -Dtest=VertexAiMasterMainTest#testVertexAiWithServiceAccountKey
+mvn test -Dtest=VertexAiMasterMainTest#testVertexAiWithServiceAccountKey
 ```
 
 **Test files:**
-- Working SA key: `keys\skorec.json` (from backup location)
+- Working SA key: `keys\sa_key.json`
 - Expired SA key: `keys\expired.json`
 - Main test class: `src/test/java/com/jguru/vertexai/VertexAiMasterMainTest.java`
 
@@ -75,16 +83,16 @@ d:\java\maven\bin\mvn.cmd test -Dtest=VertexAiMasterMainTest#testVertexAiWithSer
 
 ```bash
 # Auto-format all code (MANDATORY before committing)
-d:\java\maven\bin\mvn.cmd spotless:apply
+mvn spotless:apply
 
 # Check if code is formatted
-d:\java\maven\bin\mvn.cmd spotless:check
+mvn spotless:check
 ```
 
 **Note:** The formatter handles all style rules (indentation, line length, imports, whitespace). Just run `spotless:apply` before committing.
 
 ## Pre-commit Checklist (MANDATORY)
-There is "Run Drive" new version cmd, and run "Apply New Version" cmd. 
+
 **⚠️ CRITICAL: Complete ALL steps before every commit - NO EXCEPTIONS**
 
 **CI Enforcement:** This project enforces formatting in CI pipelines. The `spotless:check` goal runs during the Maven validate phase and will fail the build if code is not properly formatted. Unformatted code will be rejected by CI.
@@ -126,10 +134,10 @@ git checkout -b feature/your-feature-name
 **During development:**
 ```bash
 # MANDATORY BEFORE COMMIT: Format code
-d:\java\maven\bin\mvn.cmd spotless:apply
+mvn spotless:apply
 
 # MANDATORY BEFORE COMMIT: Run ALL tests - must pass 100%
-d:\java\maven\bin\mvn.cmd clean test
+mvn clean test
 
 # Only after formatting AND tests pass:
 git add -A
@@ -232,8 +240,9 @@ git push origin --delete feature/your-feature-name
 
 ## Model Configuration
 
-- Models are aliased in `models.properties` (e.g., `gemini.pro=gemini-2.5-pro`)
-- MaaS models require `.provider` property (e.g., `deepseek.r1.0528.provider=deepseek-ai`)
+- Models are aliased in `models.properties` (e.g., `gemini.pro=gemini-3.1-pro-preview`)
+- Anthropic models are included by default (e.g., `anthropic.sonnet5`, `anthropic.opus48`)
+- MaaS models require `.provider` property (e.g., `openai.gpt.oss.120b.provider=openai`); several MaaS entries (Llama, DeepSeek, Qwen, MiniMax, Moonshot, Z.AI) are commented out by default
 - Service layer resolves aliases via `VertexAiService.resolveModelName()`
 - Use `--model-name` or `-m` flag to specify model alias or full name
 
@@ -259,24 +268,27 @@ When `--sa-key-file` is explicitly provided, the application MUST:
 ## Model Routing
 
 **Model routing (automatic):**
-- **Standard Vertex AI SDK:** Gemini, Llama models (no `.provider` property)
-- **Chat Completions API:** MaaS models with `.provider` property (DeepSeek, Qwen, MiniMax, OpenAI)
+- **Standard Vertex AI SDK:** Gemini models (no `.provider` property)
+- **Chat Completions API:** MaaS models with `.provider` property (currently Anthropic, OpenAI; DeepSeek/Qwen/MiniMax/Moonshot/Z.AI are commented out in `models.properties` but supported)
 - Client detects provider and routes accordingly
 
 ## Region Check Features
 
 **Region check feature:**
 - CLI flag: `--check-all-regions` or `-car`
-- Cluster flag: `--cluster` or `-c` (US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA)
+- Cluster flag: `--cluster` or `-c` (US, EU, ASIA, MIDDLE_EAST, AFRICA, CANADA, SOUTH_AMERICA, GLOBAL)
+- Clusters resolve to a `<CLUSTER>_REGIONS` entry in `regions.properties`; `GLOBAL` is a single pseudo-region for models only served on the global endpoint
 - Tests model across all regions in specified cluster
 - Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
-- Example: `vertex.exe -car -c US -m deepseek.r1.0528 --project-id PROJECT --location us-central1 --sa-key-file key.json`
+- Example: `vertex.exe -car -c US -m gemini.pro --project-id PROJECT --location us-central1 --sa-key-file key.json`
+- Helper scripts: `bin/test-all-eu.cmd`/`.sh`, `bin/test-all-us.cmd`/`.sh`, `bin/test-global.cmd`/`.sh`, `bin/debug-all-eu.cmd`/`.sh`, `bin/debug-all-us.cmd`/`.sh`
 
 **Worldwide region check feature:**
 - CLI flag: `--worldwide` or `-w`
 - Tests model across all 42 worldwide GCP regions
 - Returns detailed status per region (SUCCESS, 404, 403, 500, etc.)
 - Example: `vertex.exe -w -m gemini.pro --project-id PROJECT --location us-central1 --sa-key-file key.json`
+- Helper script: `bin/test-worldwide.cmd`/`.sh`
 
 ## Security Considerations
 
