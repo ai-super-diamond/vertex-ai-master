@@ -80,7 +80,6 @@ public class AuthenticationConfig {
           requireNonBlank(apiKey, "apiKey");
           break;
         case SERVICE_ACCOUNT_ADC :
-          requireNonBlank(projectId, "projectId");
           requireNonBlank(location, "location");
           break;
         case SERVICE_ACCOUNT_EXPLICIT_KEY :

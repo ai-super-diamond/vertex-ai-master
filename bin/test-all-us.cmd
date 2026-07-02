@@ -1,6 +1,5 @@
 @echo off
 REM Configuration
-set PROJECT=vertex-ai-project-kotvan
 set KEY=..\keys\sa_key.json
 set PROMPT=200+200*99=?
 set MODELS_FILE=models.properties
@@ -9,7 +8,6 @@ echo ========================================
 echo Testing All Models in US Regions
 echo ========================================
 echo.
-echo Project: %PROJECT%
 echo Key: %KEY%
 echo Test Prompt: %PROMPT%
 echo.
@@ -22,7 +20,7 @@ echo Testing all models from file
 echo ========================================
 echo.
 
-java -jar "%~dp0vertex-latest.jar" --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%"
+java -jar "%~dp0vertex-latest.jar" --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%"
 
 echo.
 echo ========================================

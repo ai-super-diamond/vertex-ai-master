@@ -2,9 +2,13 @@ package com.jguru.vertexai.service;
 
 import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.domain.dto.AuthenticationType;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.List;
 
 public class AuthenticationConfigFactory {
@@ -15,9 +19,10 @@ public class AuthenticationConfigFactory {
     return AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey(apiKey).build();
   }
 
-  public AuthenticationConfig createServiceAccountConfig(String projectId, String location, String saKeyFile, boolean checkAllRegions,
-      boolean worldwide, String cluster, RegionProvider regionProvider) {
+  public AuthenticationConfig createServiceAccountConfig(String location, String saKeyFile, boolean checkAllRegions, boolean worldwide,
+      String cluster, RegionProvider regionProvider) {
     boolean hasKeyFile = saKeyFile != null && !saKeyFile.isBlank();
+    String projectId = hasKeyFile ? extractProjectIdFromServiceAccountKey(saKeyFile) : resolveAdcProjectId();
 
     String baseLocation = resolveLocation(location, checkAllRegions, worldwide, cluster, regionProvider);
 
@@ -34,6 +39,30 @@ public class AuthenticationConfigFactory {
     }
 
     return builder.build();
+  }
+
+  private String extractProjectIdFromServiceAccountKey(String saKeyFile) {
+    try (FileReader reader = new FileReader(saKeyFile)) {
+      JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+      if (json.has("project_id") && !json.get("project_id").isJsonNull()) {
+        String projectId = json.get("project_id").getAsString();
+        if (projectId != null && !projectId.isBlank()) {
+          return projectId;
+        }
+      }
+    } catch (IOException | IllegalStateException | ClassCastException e) {
+      throw new IllegalArgumentException("Failed to read project_id from service account key file: " + saKeyFile, e);
+    }
+
+    throw new IllegalArgumentException("Service account key file must contain project_id: " + saKeyFile);
+  }
+
+  private String resolveAdcProjectId() {
+    String projectId = System.getenv("GOOGLE_CLOUD_PROJECT");
+    if (projectId == null || projectId.isBlank()) {
+      projectId = System.getenv("GCLOUD_PROJECT");
+    }
+    return projectId;
   }
 
   private String resolveLocation(String location, boolean checkAllRegions, boolean worldwide, String cluster,

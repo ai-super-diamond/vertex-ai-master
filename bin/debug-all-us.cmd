@@ -1,6 +1,5 @@
 @echo off
 REM Configuration
-set PROJECT=vertex--project-durovcik
 set KEY=..\keys\sa_key.json
 set PROMPT=200+200*99=?
 set MODELS_FILE=models.properties
@@ -9,7 +8,6 @@ echo ========================================
 echo Testing All Models in US Regions (DEBUG MODE)
 echo ========================================
 echo.
-echo Project: %PROJECT%
 echo Key: %KEY%
 echo Test Prompt: %PROMPT%
 echo Debug: ENABLED
@@ -30,7 +28,7 @@ if not exist "..\target\vertex-1.0.1.jar" (
   popd
 )
 
-java -jar ..\target\vertex-1.0.1.jar --project-id %PROJECT% --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%" --debug
+java -jar ..\target\vertex-1.0.1.jar --sa-key-file %KEY% --check-all-regions --cluster US -model-file %MODELS_FILE% --text "%PROMPT%" --debug
 
 echo.
 echo ========================================

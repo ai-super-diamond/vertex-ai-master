@@ -1,7 +1,6 @@
 #!/bin/bash
 # Configuration
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT=vertex--project-durovcik
 KEY=../keys/sa_key.json
 PROMPT="200+200*99=?"
 MODELS_FILE=models.properties
@@ -10,7 +9,6 @@ echo "========================================"
 echo "Testing All Models in US Regions (DEBUG MODE)"
 echo "========================================"
 echo ""
-echo "Project: $PROJECT"
 echo "Key: $KEY"
 echo "Test Prompt: $PROMPT"
 echo "Debug: ENABLED"
@@ -30,7 +28,7 @@ if [ ! -f "$SCRIPT_DIR/../target/vertex-1.0.1.jar" ]; then
   ( cd "$SCRIPT_DIR/.." && mvn clean package -DskipTests )
 fi
 
-java -jar "$SCRIPT_DIR/../target/vertex-1.0.1.jar" --project-id "$PROJECT" --sa-key-file "$KEY" --check-all-regions --cluster US -model-file "$MODELS_FILE" --text "$PROMPT" --debug
+java -jar "$SCRIPT_DIR/../target/vertex-1.0.1.jar" --sa-key-file "$KEY" --check-all-regions --cluster US -model-file "$MODELS_FILE" --text "$PROMPT" --debug
 
 echo ""
 echo "========================================"

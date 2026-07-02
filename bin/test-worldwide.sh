@@ -1,26 +1,24 @@
 #!/bin/bash
 # Configuration
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT=mio15-project
 KEY=../keys/sa_key.json
 PROMPT="200+200*99=?"
-MODEL=gemini.pro
-MODELS_FILE=models.properties
+MODELS_FILE="$SCRIPT_DIR/models.properties"
+REGIONS_FILE="$SCRIPT_DIR/regions.properties"
 
 echo "========================================"
-echo "Testing Model Availability Worldwide"
+echo "Testing All Model Availability Worldwide"
 echo "========================================"
 echo ""
-echo "Project: $PROJECT"
 echo "Key: $KEY"
-echo "Model: $MODEL"
+echo "Models file: $MODELS_FILE"
+echo "Regions file: $REGIONS_FILE"
 echo "Test Prompt: $PROMPT"
 echo ""
 
-# --worldwide tests a single model (defaults to gemini.pro) across all worldwide
-# regions. -m and -model-file are mutually exclusive; -model-file alone still
-# resolves the gemini.pro alias to its real model name via models.properties.
-java -jar "$SCRIPT_DIR/vertex-latest.jar" --project-id "$PROJECT" --sa-key-file "$KEY" --worldwide -model-file "$MODELS_FILE" --text "$PROMPT"
+# --worldwide with -model-file tests every active model alias from the
+# properties file across all worldwide regions.
+java -jar "$SCRIPT_DIR/vertex-latest.jar" --sa-key-file "$KEY" --worldwide -model-file "$MODELS_FILE" -regions-file "$REGIONS_FILE" --text "$PROMPT"
 
 echo ""
 echo "========================================"

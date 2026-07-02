@@ -212,7 +212,7 @@ public class VertexAiClient implements ModelClient {
 
     if (projectId == null || projectId.isBlank()) {
       throw new IllegalStateException("Project ID is required for Vertex AI client. "
-          + "Please provide it via --project-id or ensure it's present in the service account key file.");
+          + "Use a service account key file that contains project_id or configure ADC with a project ID.");
     }
 
     if (clientLocation == null || clientLocation.isBlank()) {

@@ -40,9 +40,6 @@ public class VertexAiMasterMain implements Callable<Integer> {
 
   static class ServiceAccountAuth {
 
-    @Option(names = "--project-id", description = "Your Google Cloud project ID.")
-    String projectId;
-
     @Option(names = "--location", description = "The Google Cloud location (e.g., us-central1). Optional for --check-all-regions and --worldwide modes.")
     String location;
 
@@ -62,20 +59,20 @@ public class VertexAiMasterMain implements Callable<Integer> {
     ServiceAccountAuth saAuth;
   }
 
-  static class ModelSource {
+  static class ModelSelection {
 
     @Option(names = {"--model-name", "-m"}, description = "The name of the model to use.")
     String modelName;
 
     @Option(names = {"-model-file"}, description = "Test all models from properties file (.properties).")
     String modelFile;
-
-    @Option(names = {"-regions-file"}, description = "Override default region configuration (.properties).")
-    String regionsFile;
   }
 
   @ArgGroup
-  ModelSource modelSource;
+  ModelSelection modelSelection;
+
+  @Option(names = {"-regions-file"}, description = "Override default region configuration (.properties).")
+  String regionsFile;
 
   @Option(names = {"--check-all-regions", "-car"}, description = "Check model availability across all regions in a cluster.")
   private boolean checkAllRegions;
@@ -129,31 +126,31 @@ public class VertexAiMasterMain implements Callable<Integer> {
   }
 
   private String getEffectiveModelName() {
-    String name = (modelSource != null && modelSource.modelName != null && !modelSource.modelName.isBlank())
-        ? modelSource.modelName
+    String name = (modelSelection != null && modelSelection.modelName != null && !modelSelection.modelName.isBlank())
+        ? modelSelection.modelName
         : "gemini.pro";
-    if (modelSource != null && modelSource.modelFile != null && !modelSource.modelFile.isBlank()) {
-      System.setProperty("models.config", modelSource.modelFile);
+    if (modelSelection != null && modelSelection.modelFile != null && !modelSelection.modelFile.isBlank()) {
+      System.setProperty("models.config", modelSelection.modelFile);
     }
     return name;
   }
 
   private boolean isTestingAllModels() {
-    return (modelSource != null && modelSource.modelFile != null && !modelSource.modelFile.isBlank());
+    return (modelSelection != null && modelSelection.modelFile != null && !modelSelection.modelFile.isBlank());
   }
 
   private String getModelFile() {
-    return (modelSource != null && modelSource.modelFile != null) ? modelSource.modelFile : null;
+    return (modelSelection != null && modelSelection.modelFile != null) ? modelSelection.modelFile : null;
   }
 
   @Override
   public Integer call() throws Exception {
-    if (modelSource != null && modelSource.modelFile != null && !modelSource.modelFile.isBlank()) {
-      System.setProperty("models.config", modelSource.modelFile);
+    if (modelSelection != null && modelSelection.modelFile != null && !modelSelection.modelFile.isBlank()) {
+      System.setProperty("models.config", modelSelection.modelFile);
     }
 
-    if (modelSource != null && modelSource.regionsFile != null && !modelSource.regionsFile.isBlank()) {
-      System.setProperty("regions.config", modelSource.regionsFile);
+    if (regionsFile != null && !regionsFile.isBlank()) {
+      System.setProperty("regions.config", regionsFile);
     } else if (java.nio.file.Files.exists(java.nio.file.Paths.get("regions.properties"))) {
       System.setProperty("regions.config", "regions.properties");
     }
@@ -280,6 +277,19 @@ public class VertexAiMasterMain implements Callable<Integer> {
     }
 
     WorldwideCheckUseCase useCase = new WorldwideCheckUseCase(vertexAiService);
+
+    if (isTestingAllModels()) {
+      String modelFile = getModelFile();
+      System.setProperty("models.config", modelFile);
+
+      Properties modelProperties = loadModelProperties(modelFile);
+      if (modelProperties == null) {
+        return 1;
+      }
+
+      return useCase.executeAllModels(authConfig, testPrompt, debug, modelFile, modelProperties);
+    }
+
     RegionCheckResult result = useCase.execute(authConfig, modelAlias, testPrompt, debug);
 
     String modelFile = getModelFile();
@@ -308,8 +318,8 @@ public class VertexAiMasterMain implements Callable<Integer> {
       if (auth.apiKeyAuth != null) {
         return authConfigFactory.createApiKeyConfig(auth.apiKeyAuth.apiKey);
       } else if (auth.saAuth != null) {
-        return authConfigFactory.createServiceAccountConfig(auth.saAuth.projectId, auth.saAuth.location, auth.saAuth.saKeyFile,
-            checkAllRegions, worldwide, cluster, regionProvider);
+        return authConfigFactory.createServiceAccountConfig(auth.saAuth.location, auth.saAuth.saKeyFile, checkAllRegions, worldwide,
+            cluster, regionProvider);
       } else {
         logger.error("Please provide either API key or Service Account credentials.");
         return null;

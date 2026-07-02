@@ -23,11 +23,8 @@ class AuthenticationConfigTest {
   }
 
   @Test
-  void shouldRequireProjectAndLocationForAdc() {
+  void shouldRequireLocationForAdc() {
     assertThatThrownBy(() -> AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC).build())
-        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("projectId");
-    assertThatThrownBy(
-        () -> AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC).withProjectId("project").build())
         .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("location");
   }
 
@@ -45,9 +42,9 @@ class AuthenticationConfigTest {
     AuthenticationConfig apiKeyConfig = AuthenticationConfig.builder().withType(AuthenticationType.API_KEY).withApiKey("key").build();
     assertThat(apiKeyConfig.getApiKey()).isEqualTo("key");
 
-    AuthenticationConfig adcConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
-        .withProjectId("project").withLocation("region").build();
-    assertThat(adcConfig.getProjectId()).isEqualTo("project");
+    AuthenticationConfig adcConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC).withLocation("region")
+        .build();
+    assertThat(adcConfig.getProjectId()).isNull();
 
     AuthenticationConfig explicitConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_EXPLICIT_KEY)
         .withProjectId("project").withLocation("region").withSaKeyFile("path/to/key.json").build();

@@ -34,8 +34,10 @@ public class WorldwideAvailabilityClient {
    */
   public RegionCheckResult checkWorldwideAvailability(RegionCheckRequest request) throws Exception {
     // Build combined region list from the service to avoid duplicate region
-    // definitions
-    List<String> allRegions = List.copyOf(vertexAiService.getAllRegions());
+    // definitions, unless the caller already selected a specific list.
+    List<String> allRegions = request.getRegions() == null || request.getRegions().isEmpty()
+        ? List.copyOf(vertexAiService.getAllRegions())
+        : List.copyOf(request.getRegions());
 
     logger.info("Testing model '{}' across worldwide regions...", request.getModelName());
     logger.info("Total regions to test: {}", allRegions.size());
@@ -47,7 +49,8 @@ public class WorldwideAvailabilityClient {
       try {
         // Create a new request for this specific region
         RegionCheckRequest regionRequest = RegionCheckRequest.builder().withAuthenticationConfig(request.getAuthenticationConfig())
-            .withModelName(request.getModelName()).withTestPrompt(request.getTestPrompt()).withRegions(List.of(region)).build();
+            .withModelName(request.getModelName()).withTestPrompt(request.getTestPrompt()).withRegions(List.of(region))
+            .withDebug(request.isDebug()).build();
 
         // Check this specific region
         RegionCheckResult regionResult = vertexAiService.checkRegionAvailability(regionRequest);

@@ -26,11 +26,20 @@ import java.util.Map;
 import java.util.Properties;
 import com.jguru.vertexai.service.RegionProvider;
 import com.jguru.vertexai.service.RegionProviderImpl;
+import com.jguru.vertexai.service.VertexAiService;
+import com.jguru.vertexai.service.AuthenticationConfigFactory;
+import com.jguru.vertexai.service.dto.RegionCheckRequest;
+import com.jguru.vertexai.service.dto.RegionCheckResult;
 import com.jguru.vertexai.service.VertexAiServiceImpl;
 import com.jguru.vertexai.infrastructure.client.VertexAiClientFactory;
+import com.jguru.vertexai.utils.OutputRedirectionManager;
 import com.jguru.vertexai.utils.PropertiesLoader;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class VertexAiMasterMainTest {
 
@@ -71,8 +80,7 @@ class VertexAiMasterMainTest {
     assertThat(saKeyFile).as("Service Account key file should exist").exists();
 
     // Given: CLI arguments
-    String[] args = {"--project-id", TEST_PROJECT_ID, "--location", TEST_LOCATION, "--sa-key-file", saKeyPath, "--model-name",
-        TEST_MODEL_NAME, TEST_PROMPT};
+    String[] args = {"--location", TEST_LOCATION, "--sa-key-file", saKeyPath, "--model-name", TEST_MODEL_NAME, TEST_PROMPT};
 
     // When: Execute the CLI command
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -117,9 +125,12 @@ class VertexAiMasterMainTest {
   }
 
   @Test
-  void shouldRequireLocationInNormalMode() {
+  void shouldRequireLocationInNormalMode() throws IOException {
+    Path tempKeyFile = Files.createTempFile("sa-key", ".json");
+    Files.writeString(tempKeyFile, "{\"type\":\"service_account\",\"project_id\":\"test-project\"}");
+
     // Given: CLI arguments without --location in normal mode
-    String[] args = {"--project-id", "test-project", "--sa-key-file", "test.json", "--model-name", "gemini.pro", "Test prompt"};
+    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--model-name", "gemini.pro", "Test prompt"};
 
     // When: Execute the CLI command
     ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -146,8 +157,7 @@ class VertexAiMasterMainTest {
   @Test
   void shouldNotRequireLocationInRegionCheckMode() {
     // Given: CLI arguments without --location in region check mode
-    String[] args = {"--project-id", "test-project", "--sa-key-file", "test.json", "--check-all-regions", "--cluster", "US", "--model-name",
-        "gemini.pro", "Test prompt"};
+    String[] args = {"--sa-key-file", "test.json", "--check-all-regions", "--cluster", "US", "--model-name", "gemini.pro", "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -164,8 +174,7 @@ class VertexAiMasterMainTest {
   @Test
   void shouldNotRequireLocationInWorldwideMode() {
     // Given: CLI arguments without --location in worldwide mode
-    String[] args = {"--project-id", "test-project", "--sa-key-file", "test.json", "--worldwide", "--model-name", "gemini.pro",
-        "Test prompt"};
+    String[] args = {"--sa-key-file", "test.json", "--worldwide", "--model-name", "gemini.pro", "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -182,8 +191,7 @@ class VertexAiMasterMainTest {
   @Test
   void shouldRejectBothModelNameAndModelFile() {
     // Given: CLI arguments with both --model-name and -model-file
-    String[] args = {"--project-id", "test-project", "--location", "us-central1", "--model-name", "gemini-pro", "-model-file",
-        "models.properties", "Test prompt"};
+    String[] args = {"--location", "us-central1", "--model-name", "gemini-pro", "-model-file", "models.properties", "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -203,7 +211,7 @@ class VertexAiMasterMainTest {
   @Test
   void shouldAcceptModelNameOnly() {
     // Given: CLI arguments with only --model-name
-    String[] args = {"--project-id", "test-project", "--location", "us-central1", "--model-name", "gemini-1.5-pro-001", "Test prompt"};
+    String[] args = {"--location", "us-central1", "--model-name", "gemini-1.5-pro-001", "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -226,8 +234,7 @@ class VertexAiMasterMainTest {
     }
 
     // Given: CLI arguments with only -model-file
-    String[] args = {"--project-id", "test-project", "--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(),
-        "Test prompt"};
+    String[] args = {"--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(), "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -239,9 +246,34 @@ class VertexAiMasterMainTest {
   }
 
   @Test
+  void shouldAcceptModelFileWithRegionsFile() throws IOException {
+    File tempModelFile = File.createTempFile("test-models", ".properties");
+    tempModelFile.deleteOnExit();
+    File tempRegionsFile = File.createTempFile("test-regions", ".properties");
+    tempRegionsFile.deleteOnExit();
+
+    try (PrintWriter writer = new PrintWriter(new FileWriter(tempModelFile))) {
+      writer.println("test-model=gemini-1.5-pro-001");
+    }
+
+    try (PrintWriter writer = new PrintWriter(new FileWriter(tempRegionsFile))) {
+      writer.println("US_REGIONS=us-central1");
+    }
+
+    String[] args = {"--sa-key-file", "test.json", "--worldwide", "-model-file", tempModelFile.getAbsolutePath(), "-regions-file",
+        tempRegionsFile.getAbsolutePath(), "--text", "Test prompt"};
+
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    assertThat(parseResult).as("Parsing should allow -model-file with -regions-file").isNotNull();
+  }
+
+  @Test
   void shouldUseDefaultModelWhenNeitherSpecified() {
     // Given: CLI arguments without --model-name or -model-file
-    String[] args = {"--project-id", "test-project", "--location", "us-central1", "Test prompt"};
+    String[] args = {"--location", "us-central1", "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -264,8 +296,7 @@ class VertexAiMasterMainTest {
     }
 
     // Given: CLI arguments with -model-file
-    String[] args = {"--project-id", "test-project", "--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(),
-        "Test prompt"};
+    String[] args = {"--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(), "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -274,6 +305,42 @@ class VertexAiMasterMainTest {
 
     // Then: Parsing should succeed
     assertThat(parseResult).as("Parsing should succeed").isNotNull();
+  }
+
+  @Test
+  void shouldRouteWorldwideModelFileToAllModels() throws Exception {
+    Path tempModelFile = Files.createTempFile("worldwide-models", ".properties");
+    Path tempKeyFile = Files.createTempFile("sa-key", ".json");
+    Files.writeString(tempKeyFile, "{\"type\":\"service_account\",\"project_id\":\"test-project\"}");
+
+    try (PrintWriter writer = new PrintWriter(new FileWriter(tempModelFile.toFile()))) {
+      writer.println("model.one=gemini-1.5-pro-001");
+      writer.println("model.two=gemini-1.5-flash-001");
+    }
+
+    VertexAiService mockService = mock(VertexAiService.class);
+    RegionProvider mockRegionProvider = mock(RegionProvider.class);
+    AuthenticationConfigFactory authFactory = new AuthenticationConfigFactory();
+
+    when(mockService.getAllRegions()).thenReturn(List.of("us-central1"));
+    when(mockService.checkRegionAvailability(any(RegionCheckRequest.class))).thenAnswer(invocation -> {
+      RegionCheckRequest request = invocation.getArgument(0);
+      return new RegionCheckResult(Map.of(request.getRegions().get(0), "SUCCESS"));
+    });
+
+    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--worldwide", "-model-file", tempModelFile.toString(), "--text",
+        "Test prompt"};
+
+    VertexAiMasterMain app = new VertexAiMasterMain(mockService, mockRegionProvider, authFactory, new OutputRedirectionManager());
+    CommandLine cmd = new CommandLine(app);
+
+    int exitCode = cmd.execute(args);
+
+    assertThat(exitCode).isEqualTo(0);
+    verify(mockService)
+        .checkRegionAvailability(org.mockito.ArgumentMatchers.argThat(request -> "model.one".equals(request.getModelName())));
+    verify(mockService)
+        .checkRegionAvailability(org.mockito.ArgumentMatchers.argThat(request -> "model.two".equals(request.getModelName())));
   }
 
   @Test
@@ -287,8 +354,7 @@ class VertexAiMasterMainTest {
     assertThat(expiredKeyFile).as("Expired Service Account key file should exist").exists();
 
     // Given: CLI arguments with expired credentials
-    String[] args = {"--project-id", "vertex-ai-project-skorec", "--location", "us-central1", "--sa-key-file", expiredKeyPath,
-        "--model-name", "gemini.pro", "Test prompt"};
+    String[] args = {"--location", "us-central1", "--sa-key-file", expiredKeyPath, "--model-name", "gemini.pro", "Test prompt"};
 
     // When: Execute the CLI command with expired credentials
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -476,8 +542,7 @@ class VertexAiMasterMainTest {
   private int testModelInRegion(String modelAlias, String region, String workingKeyPath, String testPrompt, PrintWriter csvWriter) {
     int passed = 0;
 
-    String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name", modelAlias,
-        testPrompt};
+    String[] args = {"--location", region, "--sa-key-file", workingKeyPath, "--model-name", modelAlias, testPrompt};
 
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -671,8 +736,7 @@ class VertexAiMasterMainTest {
       for (String region : usRegions) {
         logger.info("\nTesting region: {}", region);
 
-        String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name",
-            testModelAlias, testPrompt};
+        String[] args = {"--location", region, "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -814,8 +878,7 @@ class VertexAiMasterMainTest {
       for (String region : usRegions) {
         logger.info("\nTesting region: {}", region);
 
-        String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name",
-            testModelAlias, testPrompt};
+        String[] args = {"--location", region, "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
@@ -959,8 +1022,7 @@ class VertexAiMasterMainTest {
       for (String region : allRegions) {
         logger.info("\nTesting region: {}", region);
 
-        String[] args = {"--project-id", TEST_PROJECT_ID, "--location", region, "--sa-key-file", workingKeyPath, "--model-name",
-            testModelAlias, testPrompt};
+        String[] args = {"--location", region, "--sa-key-file", workingKeyPath, "--model-name", testModelAlias, testPrompt};
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
