@@ -41,6 +41,24 @@ public class AuthenticationConfigFactory {
     return builder.build();
   }
 
+  // Deliberately stricter than createServiceAccountConfig's ADC branch (which falls back to env vars and
+  // tolerates a null projectId): --adc is a flags-only mode by design, so project must be explicit here.
+  public AuthenticationConfig createAdcConfig(String project, String location, boolean checkAllRegions, boolean worldwide, String cluster,
+      RegionProvider regionProvider) {
+    if (project == null || project.isBlank()) {
+      throw new IllegalArgumentException("Project ID is required for --adc mode. Provide --project.");
+    }
+
+    String baseLocation = resolveLocation(location, checkAllRegions, worldwide, cluster, regionProvider);
+
+    if (baseLocation == null && !checkAllRegions && !worldwide) {
+      throw new IllegalArgumentException("Location is required in normal mode. Provide --adc-location.");
+    }
+
+    return AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC).withProjectId(project).withLocation(baseLocation)
+        .build();
+  }
+
   private String extractProjectIdFromServiceAccountKey(String saKeyFile) {
     try (FileReader reader = new FileReader(saKeyFile)) {
       JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();

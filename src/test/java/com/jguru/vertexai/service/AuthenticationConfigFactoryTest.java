@@ -109,6 +109,46 @@ class AuthenticationConfigFactoryTest {
   }
 
   @Test
+  void shouldCreateAdcConfigWithExplicitLocation() {
+    AuthenticationConfig config = factory.createAdcConfig("proj", "europe-west1", false, false, null, mockRegionProvider);
+
+    assertThat(config).isNotNull();
+    assertThat(config.getType()).isEqualTo(AuthenticationType.SERVICE_ACCOUNT_ADC);
+    assertThat(config.getProjectId()).isEqualTo("proj");
+    assertThat(config.getLocation()).isEqualTo("europe-west1");
+  }
+
+  @Test
+  void shouldThrowExceptionWhenProjectMissingForAdc() {
+    assertThatThrownBy(() -> factory.createAdcConfig(null, "europe-west1", false, false, null, mockRegionProvider))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("--project");
+  }
+
+  @Test
+  void shouldThrowExceptionWhenAdcLocationMissingInNormalMode() {
+    assertThatThrownBy(() -> factory.createAdcConfig("proj", null, false, false, null, mockRegionProvider))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("--adc-location");
+  }
+
+  @Test
+  void shouldDefaultAdcLocationForRegionCheckMode() {
+    when(mockRegionProvider.getRegionsForCluster("US")).thenReturn(Arrays.asList("us-east1", "us-west1"));
+
+    AuthenticationConfig config = factory.createAdcConfig("proj", null, true, false, "US", mockRegionProvider);
+
+    assertThat(config).isNotNull();
+    assertThat(config.getLocation()).isEqualTo("us-east1");
+  }
+
+  @Test
+  void shouldDefaultAdcLocationForWorldwideMode() {
+    AuthenticationConfig config = factory.createAdcConfig("proj", null, false, true, null, mockRegionProvider);
+
+    assertThat(config).isNotNull();
+    assertThat(config.getLocation()).isEqualTo("us-central1");
+  }
+
+  @Test
   void shouldRejectKeyFileWithoutProjectId() throws IOException {
     Path keyFile = tempDir.resolve("missing-project.json");
     Files.writeString(keyFile, "{\"type\":\"service_account\"}");

@@ -189,6 +189,33 @@ class VertexAiMasterMainTest {
   }
 
   @Test
+  void shouldAcceptAdcAuth() {
+    // Given: CLI arguments using --adc with --project and --adc-location
+    String[] args = {"--adc", "--project", "my-proj", "--adc-location", "europe-west1", "--model-name", "gemini.pro", "Test prompt"};
+
+    // When: Parse command
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+
+    // Then: Parsing succeeds
+    assertThat(parseResult).as("Parsing should succeed with --adc").isNotNull();
+  }
+
+  @Test
+  void shouldRejectAdcCombinedWithApiKey() {
+    // Given: CLI arguments combining --adc with --api-key (mutually exclusive auth groups)
+    String[] args = {"--adc", "--project", "my-proj", "--adc-location", "europe-west1", "--api-key", "test-key", "Test prompt"};
+
+    // When/Then: Parsing should fail due to mutually exclusive auth groups
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> cmd.parseArgs(args))
+        .isInstanceOf(CommandLine.MutuallyExclusiveArgsException.class);
+  }
+
+  @Test
   void shouldRejectBothModelNameAndModelFile() {
     // Given: CLI arguments with both --model-name and -model-file
     String[] args = {"--location", "us-central1", "--model-name", "gemini-pro", "-model-file", "models.properties", "Test prompt"};

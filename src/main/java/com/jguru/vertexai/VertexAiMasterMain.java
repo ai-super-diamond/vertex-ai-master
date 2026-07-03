@@ -47,6 +47,19 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String saKeyFile;
   }
 
+  static class AdcAuth {
+
+    // Unread beyond picocli's own required-group check; presence is tested via `auth.adcAuth != null` elsewhere.
+    @Option(names = "--adc", required = true, description = "Use Application Default Credentials (gcloud auth application-default login).")
+    boolean adc;
+
+    @Option(names = "--project", description = "Google Cloud project ID (required with --adc).")
+    String project;
+
+    @Option(names = "--adc-location", description = "The Google Cloud location (e.g., europe-west1). Required with --adc in normal mode.")
+    String adcLocation;
+  }
+
   @ArgGroup(multiplicity = "1")
   Auth auth;
 
@@ -57,6 +70,9 @@ public class VertexAiMasterMain implements Callable<Integer> {
 
     @ArgGroup(exclusive = false)
     ServiceAccountAuth saAuth;
+
+    @ArgGroup(exclusive = false)
+    AdcAuth adcAuth;
   }
 
   static class ModelSelection {
@@ -206,8 +222,8 @@ public class VertexAiMasterMain implements Callable<Integer> {
   }
 
   private Integer performRegionCheck() throws Exception {
-    if (auth.saAuth == null) {
-      logger.error("Region check requires Service Account authentication.");
+    if (auth.saAuth == null && auth.adcAuth == null) {
+      logger.error("Region check requires Service Account or Application Default Credentials authentication.");
       return 1;
     }
 
@@ -225,7 +241,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
     String testPrompt = (textOption != null && !textOption.isEmpty()) ? textOption : (text != null ? text : "200+200*99=?");
     AuthenticationConfig authConfig = createAuthenticationConfig();
     if (authConfig == null) {
-      throw new IllegalStateException("Service account configuration is required for region availability checks.");
+      return 1;
     }
 
     RegionCheckUseCase useCase = new RegionCheckUseCase(vertexAiService);
@@ -263,8 +279,8 @@ public class VertexAiMasterMain implements Callable<Integer> {
   }
 
   private Integer performWorldwideCheck() throws Exception {
-    if (auth.saAuth == null) {
-      logger.error("Worldwide check requires Service Account authentication.");
+    if (auth.saAuth == null && auth.adcAuth == null) {
+      logger.error("Worldwide check requires Service Account or Application Default Credentials authentication.");
       return 1;
     }
 
@@ -273,7 +289,7 @@ public class VertexAiMasterMain implements Callable<Integer> {
 
     AuthenticationConfig authConfig = createAuthenticationConfig();
     if (authConfig == null) {
-      throw new IllegalStateException("Service account configuration is required for worldwide availability checks.");
+      return 1;
     }
 
     WorldwideCheckUseCase useCase = new WorldwideCheckUseCase(vertexAiService);
@@ -320,8 +336,11 @@ public class VertexAiMasterMain implements Callable<Integer> {
       } else if (auth.saAuth != null) {
         return authConfigFactory.createServiceAccountConfig(auth.saAuth.location, auth.saAuth.saKeyFile, checkAllRegions, worldwide,
             cluster, regionProvider);
+      } else if (auth.adcAuth != null) {
+        return authConfigFactory.createAdcConfig(auth.adcAuth.project, auth.adcAuth.adcLocation, checkAllRegions, worldwide, cluster,
+            regionProvider);
       } else {
-        logger.error("Please provide either API key or Service Account credentials.");
+        logger.error("Please provide either API key, Service Account, or Application Default Credentials.");
         return null;
       }
     } catch (IllegalArgumentException | IllegalStateException e) {
