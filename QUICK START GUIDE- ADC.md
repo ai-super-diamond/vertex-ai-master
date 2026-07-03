@@ -11,7 +11,7 @@ Windows 🪟:
 cd bin
 ```
 
-Linux/macOS 🍎:
+Linux 🐧/macOS 🍎:
 
 ```sh
 cd bin
