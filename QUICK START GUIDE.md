@@ -87,3 +87,13 @@ Test output files are written under:
 ```text
 bin/results
 ```
+
+## Alternative: Application Default Credentials (no key file)
+
+If you don't have a service account key file, authenticate with `gcloud`
+instead and pass the project/location explicitly via flags:
+
+```sh
+gcloud auth application-default login
+vertex-ai --adc --project my-gcp-project --adc-location europe-west1 -m gemini.pro "Hello"
+```

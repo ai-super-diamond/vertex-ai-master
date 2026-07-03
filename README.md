@@ -86,6 +86,13 @@ java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --location us-c
     # Automatically uses credentials from 'gcloud auth application-default login'
     .\bin\vertex.exe --location us-central1 -m gemini.pro "Prompt"
     ```
+4.  **Application Default Credentials, flags only (no key file, no env vars):**
+    ```powershell
+    # Project and location are passed explicitly; credentials still come from
+    # 'gcloud auth application-default login'
+    gcloud auth application-default login
+    .\bin\vertex.exe --adc --project my-gcp-project --adc-location europe-west1 -m gemini.pro "Prompt"
+    ```
 
 ### Availability & Region Checks
 
