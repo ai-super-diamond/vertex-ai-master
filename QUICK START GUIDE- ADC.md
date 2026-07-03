@@ -5,13 +5,13 @@ This guide covers running the CLI with **Application Default Credentials
 
 ## 1. Go to `bin`
 
-Windows:
+Windows 🪟:
 
 ```cmd
 cd bin
 ```
 
-Linux/macOS:
+Linux/macOS 🍎:
 
 ```sh
 cd bin
