@@ -1,3 +1,15 @@
+## Shell Notes (Windows PowerShell)
+
+This repo's default shell is PowerShell. When constructing git commands that
+use Git's `@{...}` revision syntax (e.g. `@{upstream}`, `@{push}`), always
+quote the token so PowerShell does not interpret `{` as the start of a hash
+literal.
+
+- Preferred: `git rev-list --left-right --count "@{upstream}...HEAD"`
+- Do **not** pass bare `@{upstream}...HEAD` - PowerShell fails with
+  `Missing '=' operator after key in hash literal`.
+
+
 ## Project Overview
 
 - Java 25 with GraalVM
