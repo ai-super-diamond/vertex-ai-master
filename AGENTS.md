@@ -33,14 +33,15 @@ Architecture:
 ```bash
 mvn clean compile
 mvn clean package
-java -jar target/vertex-1.0.1.jar --help
+java -jar target/vertex-1.0.2.jar --help
 ```
 
 Windows and cross-platform helper scripts:
 
 - `.\bin\build-jar.cmd` / `./bin/build-jar.sh`
 - `.\bin\build-exe.cmd`
-- `.\bin\doctor.cmd` / `./bin/doctor.sh`
+- `.\bin\doctor.cmd` / `./bin/doctor.sh` (checks Maven, Java, jar, properties, key,
+  gcloud CLI, and ADC credentials)
 
 ## Testing
 
@@ -86,6 +87,8 @@ Run formatting before finishing any code change that touches Java sources.
 
 - `--check-all-regions` / `-car` checks a model across a cluster
 - `--worldwide` / `-w` checks the model across all worldwide GCP regions
+- `--model-file` / `-mf` tests all models from a properties file
+- `--regions-file` / `-rf` overrides the default region configuration
 - Cluster values map to `<CLUSTER>_REGIONS` entries in `regions.properties`
 - `GLOBAL` is a single pseudo-region for models served only on the global
   endpoint
@@ -101,6 +104,6 @@ Run formatting before finishing any code change that touches Java sources.
 - Main entry: `src/main/java/com/jguru/vertexai/VertexAiMasterMain.java`
 - Service API: `src/main/java/com/jguru/vertexai/service/VertexAiService.java`
 - Service impl: `src/main/java/com/jguru/vertexai/service/VertexAiServiceImpl.java`
-- Client: `src/main/java/com/jguru/vertexai/client/VertexAiClient.java`
+- Client: `src/main/java/com/jguru/vertexai/infrastructure/client/VertexAiClient.java`
 - Model config: `src/main/resources/models.properties`
-- Region tests: `src/test/java/com/jguru/vertexai/client/WorldwideAvailabilityClientTest.java`
+- Region tests: `src/test/java/com/jguru/vertexai/infrastructure/client/WorldwideAvailabilityClientTest.java`
