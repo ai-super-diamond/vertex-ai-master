@@ -89,6 +89,24 @@ if exist "%KEY_FILE%" (
     set /a WARN_COUNT+=1
 )
 
+REM --- gcloud CLI (used to obtain ADC) ---
+where gcloud >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] gcloud CLI not found on PATH. Needed to run "gcloud auth application-default login" for --adc scripts, e.g. test-*-adc.cmd.
+    set /a WARN_COUNT+=1
+) else (
+    echo [ OK ] gcloud CLI found.
+)
+
+REM --- Application Default Credentials ---
+set ADC_FILE=%APPDATA%\gcloud\application_default_credentials.json
+if exist "%ADC_FILE%" (
+    echo [ OK ] Application Default Credentials found: %ADC_FILE%
+) else (
+    echo [WARN] ADC credentials not found at %ADC_FILE%. Required for --adc scripts, e.g. test-*-adc.cmd. Run: gcloud auth application-default login
+    set /a WARN_COUNT+=1
+)
+
 REM --- results directory writable ---
 if not exist "%SCRIPT_DIR%\results" (
     echo [WARN] results\ directory does not exist yet; it will be created on first run.

@@ -80,6 +80,23 @@ else
     WARN_COUNT=$((WARN_COUNT + 1))
 fi
 
+# --- gcloud CLI (used to obtain ADC) ---
+if command -v gcloud >/dev/null 2>&1; then
+    echo "[ OK ] gcloud CLI found."
+else
+    echo "[WARN] gcloud CLI not found on PATH. Needed to run \"gcloud auth application-default login\" for --adc scripts, e.g. test-*-adc.sh."
+    WARN_COUNT=$((WARN_COUNT + 1))
+fi
+
+# --- Application Default Credentials ---
+ADC_FILE="${CLOUDSDK_CONFIG:-$HOME/.config/gcloud}/application_default_credentials.json"
+if [ -f "$ADC_FILE" ]; then
+    echo "[ OK ] Application Default Credentials found: $ADC_FILE"
+else
+    echo "[WARN] ADC credentials not found at $ADC_FILE. Required for --adc scripts (test-*-adc.sh). Run: gcloud auth application-default login"
+    WARN_COUNT=$((WARN_COUNT + 1))
+fi
+
 # --- results directory writable ---
 if [ ! -d "$SCRIPT_DIR/results" ]; then
     echo "[WARN] results/ directory does not exist yet; it will be created on first run."
