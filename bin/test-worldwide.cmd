@@ -15,9 +15,9 @@ echo Regions file: %REGIONS_FILE%
 echo Test Prompt: %PROMPT%
 echo.
 
-REM --worldwide with -model-file tests every active model alias from the
+REM --worldwide with --model-file tests every active model alias from the
 REM properties file across all worldwide regions.
-java -jar "%~dp0vertex-latest.jar" --sa-key-file %KEY% --worldwide -model-file "%MODELS_FILE%" -regions-file "%REGIONS_FILE%" --text "%PROMPT%"
+java -jar "%~dp0vertex-latest.jar" --sa-key-file %KEY% --worldwide --model-file "%MODELS_FILE%" --regions-file "%REGIONS_FILE%" --text "%PROMPT%"
 
 echo.
 echo ========================================

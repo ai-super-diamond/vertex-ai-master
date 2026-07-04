@@ -15,7 +15,7 @@ echo.
 echo Using model file: %MODELS_FILE%
 echo.
 
-REM Test all models using the -model-file parameter with debug enabled
+REM Test all models using the --model-file parameter with debug enabled
 echo ========================================
 echo Testing all models from file (with debug info)
 echo ========================================
@@ -28,7 +28,7 @@ if not exist "..\target\vertex-1.0.1.jar" (
   popd
 )
 
-java -jar ..\target\vertex-1.0.1.jar --sa-key-file %KEY% --check-all-regions --cluster EU -model-file %MODELS_FILE% --text "%PROMPT%" --debug
+java -jar ..\target\vertex-1.0.1.jar --sa-key-file %KEY% --check-all-regions --cluster EU --model-file %MODELS_FILE% --text "%PROMPT%" --debug
 
 echo.
 echo ========================================

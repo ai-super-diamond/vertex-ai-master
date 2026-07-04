@@ -16,7 +16,7 @@ echo ""
 echo "Using model file: $MODELS_FILE"
 echo ""
 
-# Test all models using the -model-file parameter with debug enabled
+# Test all models using the --model-file parameter with debug enabled
 echo "========================================"
 echo "Testing all models from file (with debug info)"
 echo "========================================"
@@ -28,7 +28,7 @@ if [ ! -f "$SCRIPT_DIR/../target/vertex-1.0.1.jar" ]; then
   ( cd "$SCRIPT_DIR/.." && mvn clean package -DskipTests )
 fi
 
-java -jar "$SCRIPT_DIR/../target/vertex-1.0.1.jar" --sa-key-file "$KEY" --check-all-regions --cluster US -model-file "$MODELS_FILE" --text "$PROMPT" --debug
+java -jar "$SCRIPT_DIR/../target/vertex-1.0.1.jar" --sa-key-file "$KEY" --check-all-regions --cluster US --model-file "$MODELS_FILE" --text "$PROMPT" --debug
 
 echo ""
 echo "========================================"

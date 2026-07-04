@@ -82,7 +82,7 @@ This calls the CLI with `--adc --project <PROJECT>`, using ADC credentials
 instead of a service account key file:
 
 ```text
-java -jar vertex-latest.jar --adc --project <PROJECT> --check-all-regions --cluster EU -model-file models.properties --text "..."
+java -jar vertex-latest.jar --adc --project <PROJECT> --check-all-regions --cluster EU --model-file models.properties --text "..."
 ```
 
 ## 7. Check results

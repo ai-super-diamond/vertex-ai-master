@@ -18,13 +18,13 @@ echo NOTE: Run 'gcloud auth application-default login' first, and set
 echo       PROJECT above to your Google Cloud project ID.
 echo.
 
-REM Test all models using the -model-file parameter
+REM Test all models using the --model-file parameter
 echo ========================================
 echo Testing all models from file
 echo ========================================
 echo.
 
-java -jar "%~dp0vertex-latest.jar" --adc --project %PROJECT% --check-all-regions --cluster EU -model-file %MODELS_FILE% --text "%PROMPT%"
+java -jar "%~dp0vertex-latest.jar" --adc --project %PROJECT% --check-all-regions --cluster EU --model-file %MODELS_FILE% --text "%PROMPT%"
 
 echo.
 echo ========================================

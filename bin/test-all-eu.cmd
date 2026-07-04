@@ -14,13 +14,13 @@ echo.
 echo Using model file: %MODELS_FILE%
 echo.
 
-REM Test all models using the -model-file parameter
+REM Test all models using the --model-file parameter
 echo ========================================
 echo Testing all models from file
 echo ========================================
 echo.
 
-java -jar "%~dp0vertex-latest.jar" --sa-key-file %KEY% --check-all-regions --cluster EU -model-file %MODELS_FILE% --text "%PROMPT%"
+java -jar "%~dp0vertex-latest.jar" --sa-key-file %KEY% --check-all-regions --cluster EU --model-file %MODELS_FILE% --text "%PROMPT%"
 
 echo.
 echo ========================================

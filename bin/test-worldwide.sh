@@ -16,9 +16,9 @@ echo "Regions file: $REGIONS_FILE"
 echo "Test Prompt: $PROMPT"
 echo ""
 
-# --worldwide with -model-file tests every active model alias from the
+# --worldwide with --model-file tests every active model alias from the
 # properties file across all worldwide regions.
-java -jar "$SCRIPT_DIR/vertex-latest.jar" --sa-key-file "$KEY" --worldwide -model-file "$MODELS_FILE" -regions-file "$REGIONS_FILE" --text "$PROMPT"
+java -jar "$SCRIPT_DIR/vertex-latest.jar" --sa-key-file "$KEY" --worldwide --model-file "$MODELS_FILE" --regions-file "$REGIONS_FILE" --text "$PROMPT"
 
 echo ""
 echo "========================================"

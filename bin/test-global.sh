@@ -15,13 +15,13 @@ echo ""
 echo "Using model file: $MODELS_FILE"
 echo ""
 
-# Test all models using the -model-file parameter, global endpoint only
+# Test all models using the --model-file parameter, global endpoint only
 echo "========================================"
 echo "Testing all models from file"
 echo "========================================"
 echo ""
 
-java -jar "$SCRIPT_DIR/vertex-latest.jar" --sa-key-file "$KEY" --check-all-regions --cluster GLOBAL -model-file "$MODELS_FILE" --text "$PROMPT"
+java -jar "$SCRIPT_DIR/vertex-latest.jar" --sa-key-file "$KEY" --check-all-regions --cluster GLOBAL --model-file "$MODELS_FILE" --text "$PROMPT"
 
 echo ""
 echo "========================================"

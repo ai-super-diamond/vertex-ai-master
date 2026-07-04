@@ -132,7 +132,7 @@ Add `--debug` to see full request/response details and internal routing logic.
 
 ### `models.properties`
 
-Model routing and aliases are defined in `src/main/resources/models.properties`. You can override this by placing a `models.properties` file in the same directory as the executable or using the `-model-file` flag.
+Model routing and aliases are defined in `src/main/resources/models.properties`. You can override this by placing a `models.properties` file in the same directory as the executable or using the `--model-file` flag.
 
 Example configuration:
 ```properties
