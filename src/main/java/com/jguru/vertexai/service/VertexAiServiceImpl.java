@@ -70,7 +70,7 @@ public class VertexAiServiceImpl implements VertexAiService {
       result = GenerationResult.builder().withText(response).build();
       logger.info("Successfully generated content using model: {}", resolvedModel);
     } catch (ApiCallException e) {
-      result = GenerationResult.builder().withErrorMessage(e.getMessage()).build();
+      result = GenerationResult.failure(e.getMessage());
       logger.error("Error generating content for model '{}': {}", resolvedModel, e.getMessage(), e);
     }
     return result;

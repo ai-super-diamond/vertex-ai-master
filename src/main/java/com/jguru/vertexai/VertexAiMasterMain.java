@@ -12,11 +12,14 @@ import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.service.dto.GenerationRequest;
 import com.jguru.vertexai.domain.dto.GenerationResult;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
+import com.jguru.vertexai.utils.MarkdownReportGenerator;
 import com.jguru.vertexai.utils.OutputRedirectionManager;
 import com.jguru.vertexai.utils.PropertiesLoader;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -80,14 +83,14 @@ public class VertexAiMasterMain implements Callable<Integer> {
     @Option(names = {"--model-name", "-m"}, description = "The name of the model to use.")
     String modelName;
 
-    @Option(names = {"-model-file"}, description = "Test all models from properties file (.properties).")
+    @Option(names = {"--model-file", "-mf"}, description = "Test all models from properties file (.properties).")
     String modelFile;
   }
 
   @ArgGroup
   ModelSelection modelSelection;
 
-  @Option(names = {"-regions-file"}, description = "Override default region configuration (.properties).")
+  @Option(names = {"--regions-file", "-rf"}, description = "Override default region configuration (.properties).")
   String regionsFile;
 
   @Option(names = {"--check-all-regions", "-car"}, description = "Check model availability across all regions in a cluster.")
@@ -178,7 +181,9 @@ public class VertexAiMasterMain implements Callable<Integer> {
       this.vertexAiService = createDefaultVertexAiService(this.regionProvider);
     }
 
-    outputManager.setupOutputRedirection(outputFile, debug, checkAllRegions, worldwide);
+    boolean normalGeneration = !checkAllRegions && !worldwide && isServiceAccountOrAdcAuth();
+    boolean captureOutput = debug || checkAllRegions || worldwide || normalGeneration;
+    outputManager.setupOutputRedirection(outputFile, captureOutput);
 
     try {
       if (checkAllRegions) {
@@ -207,10 +212,23 @@ public class VertexAiMasterMain implements Callable<Integer> {
       return 1;
     }
 
+    if (isTestingAllModels()) {
+      return performNormalGenerationAllModels(authConfig, prompt);
+    }
+
     GenerationRequest request = GenerationRequest.builder().withAuthenticationConfig(authConfig).withModelName(getEffectiveModelName())
         .withText(prompt).build();
 
     GenerationResult result = vertexAiService.generateContent(request);
+
+    if (isServiceAccountOrAdcAuth()) {
+      String region = authConfig.getLocation() != null ? authConfig.getLocation() : "UNKNOWN";
+      Map<String, MarkdownReportGenerator.ModelTestResult> modelResults = new LinkedHashMap<>();
+      modelResults.put(getEffectiveModelName(), toModelTestResult(getEffectiveModelName(), region, result));
+
+      Properties modelProperties = loadModelPropertiesOrDefault(getModelFile());
+      writeNormalGenerationReport(modelResults, modelProperties, region, prompt, authConfig.getProjectId());
+    }
 
     if (result.isSuccess()) {
       System.out.println(result.getContent());
@@ -218,6 +236,77 @@ public class VertexAiMasterMain implements Callable<Integer> {
     } else {
       logger.error("Error generating content: {}", result.getErrorMessage());
       return 1;
+    }
+  }
+
+  private Integer performNormalGenerationAllModels(AuthenticationConfig authConfig, String prompt) throws Exception {
+    String modelFile = getModelFile();
+    Properties modelProperties = loadModelProperties(modelFile);
+    if (modelProperties == null) {
+      return 1;
+    }
+
+    String region = authConfig.getLocation() != null ? authConfig.getLocation() : "UNKNOWN";
+    Map<String, MarkdownReportGenerator.ModelTestResult> modelResults = new LinkedHashMap<>();
+    int successfulModels = 0;
+
+    for (String modelAlias : extractModelAliases(modelProperties)) {
+      logger.info("\n========================================");
+      logger.info("Testing Model: {}", modelAlias);
+      logger.info("========================================");
+
+      GenerationRequest request = GenerationRequest.builder().withAuthenticationConfig(authConfig).withModelName(modelAlias)
+          .withText(prompt).build();
+      GenerationResult result = vertexAiService.generateContent(request);
+
+      if (result.isSuccess()) {
+        successfulModels++;
+        System.out.println(result.getContent());
+      } else {
+        logger.error("Error generating content for {}: {}", modelAlias, result.getErrorMessage());
+      }
+
+      modelResults.put(modelAlias, toModelTestResult(modelAlias, region, result));
+    }
+
+    if (isServiceAccountOrAdcAuth()) {
+      writeNormalGenerationReport(modelResults, modelProperties, region, prompt, authConfig.getProjectId());
+    }
+
+    return successfulModels > 0 ? 0 : 1;
+  }
+
+  private java.util.Set<String> extractModelAliases(Properties modelProperties) {
+    java.util.Set<String> modelAliases = new java.util.TreeSet<>();
+    for (Object key : modelProperties.keySet()) {
+      String keyStr = key.toString();
+      if (!keyStr.endsWith(".region") && !keyStr.endsWith(".provider") && !keyStr.endsWith(".openai") && !keyStr.endsWith(".api")
+          && !keyStr.contains(".test.")) {
+        modelAliases.add(keyStr);
+      }
+    }
+    return modelAliases;
+  }
+
+  private MarkdownReportGenerator.ModelTestResult toModelTestResult(String modelAlias, String region, GenerationResult result) {
+    boolean success = result.isSuccess();
+    Map<String, String> regionResults = new LinkedHashMap<>();
+    regionResults.put(region, success ? "SUCCESS" : result.getErrorMessage());
+    return new MarkdownReportGenerator.ModelTestResult(modelAlias, success ? 1 : 0, success ? 0 : 1, regionResults);
+  }
+
+  private boolean isServiceAccountOrAdcAuth() {
+    return auth.apiKeyAuth == null;
+  }
+
+  private void writeNormalGenerationReport(Map<String, MarkdownReportGenerator.ModelTestResult> modelResults, Properties modelProperties,
+      String region, String prompt, String projectId) {
+    try {
+      String reportPath = MarkdownReportGenerator.generateReport("results", region.toUpperCase(), modelResults, modelProperties, prompt, 1,
+          projectId);
+      logger.info("\n📄 Markdown report generated: {}", reportPath);
+    } catch (IOException e) {
+      logger.warn("Failed to generate Markdown report: {}", e.getMessage());
     }
   }
 

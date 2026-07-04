@@ -30,6 +30,7 @@ import com.jguru.vertexai.service.VertexAiService;
 import com.jguru.vertexai.service.AuthenticationConfigFactory;
 import com.jguru.vertexai.service.dto.RegionCheckRequest;
 import com.jguru.vertexai.service.dto.RegionCheckResult;
+import com.jguru.vertexai.domain.dto.GenerationResult;
 import com.jguru.vertexai.service.VertexAiServiceImpl;
 import com.jguru.vertexai.infrastructure.client.VertexAiClientFactory;
 import com.jguru.vertexai.utils.OutputRedirectionManager;
@@ -128,30 +129,24 @@ class VertexAiMasterMainTest {
   void shouldRequireLocationInNormalMode() throws IOException {
     Path tempKeyFile = Files.createTempFile("sa-key", ".json");
     Files.writeString(tempKeyFile, "{\"type\":\"service_account\",\"project_id\":\"test-project\"}");
+    Path tempOutputFile = Files.createTempFile("normal-mode-output", ".txt");
 
-    // Given: CLI arguments without --location in normal mode
-    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--model-name", "gemini.pro", "Test prompt"};
+    // Given: CLI arguments without --location in normal mode. Normal generation with SA/ADC auth
+    // now redirects console output to --output-file (mirroring --check-all-regions/--worldwide),
+    // so the error is captured there rather than on stderr.
+    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--model-name", "gemini.pro", "--output-file", tempOutputFile.toString(),
+        "Test prompt"};
 
     // When: Execute the CLI command
-    ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-    PrintStream originalErr = System.err;
+    VertexAiMasterMain app = new VertexAiMasterMain();
+    CommandLine cmd = new CommandLine(app);
+    int exitCode = cmd.execute(args);
 
-    try {
-      System.setErr(new PrintStream(errContent));
+    // Then: Should fail with error about missing location
+    assertThat(exitCode).as("CLI should fail when location is missing in normal mode").isNotEqualTo(0);
 
-      VertexAiMasterMain app = new VertexAiMasterMain();
-      CommandLine cmd = new CommandLine(app);
-      int exitCode = cmd.execute(args);
-
-      // Then: Should fail with error about missing location
-      assertThat(exitCode).as("CLI should fail when location is missing in normal mode").isNotEqualTo(0);
-
-      String errorOutput = errContent.toString();
-      assertThat(errorOutput).as("Error should mention required location").containsAnyOf("location", "Location");
-
-    } finally {
-      System.setErr(originalErr);
-    }
+    String output = Files.readString(tempOutputFile);
+    assertThat(output).as("Error should mention required location").containsAnyOf("location", "Location");
   }
 
   @Test
@@ -217,8 +212,8 @@ class VertexAiMasterMainTest {
 
   @Test
   void shouldRejectBothModelNameAndModelFile() {
-    // Given: CLI arguments with both --model-name and -model-file
-    String[] args = {"--location", "us-central1", "--model-name", "gemini-pro", "-model-file", "models.properties", "Test prompt"};
+    // Given: CLI arguments with both --model-name and --model-file
+    String[] args = {"--location", "us-central1", "--model-name", "gemini-pro", "--model-file", "models.properties", "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -260,8 +255,8 @@ class VertexAiMasterMainTest {
       writer.println("test-model.provider=test-provider");
     }
 
-    // Given: CLI arguments with only -model-file
-    String[] args = {"--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(), "Test prompt"};
+    // Given: CLI arguments with only --model-file
+    String[] args = {"--location", "us-central1", "--model-file", tempModelFile.getAbsolutePath(), "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -269,7 +264,7 @@ class VertexAiMasterMainTest {
     CommandLine.ParseResult parseResult = cmd.parseArgs(args);
 
     // Then: Parsing succeeds
-    assertThat(parseResult).as("Parsing should succeed with -model-file only").isNotNull();
+    assertThat(parseResult).as("Parsing should succeed with --model-file only").isNotNull();
   }
 
   @Test
@@ -287,19 +282,19 @@ class VertexAiMasterMainTest {
       writer.println("US_REGIONS=us-central1");
     }
 
-    String[] args = {"--sa-key-file", "test.json", "--worldwide", "-model-file", tempModelFile.getAbsolutePath(), "-regions-file",
+    String[] args = {"--sa-key-file", "test.json", "--worldwide", "--model-file", tempModelFile.getAbsolutePath(), "--regions-file",
         tempRegionsFile.getAbsolutePath(), "--text", "Test prompt"};
 
     VertexAiMasterMain app = new VertexAiMasterMain();
     CommandLine cmd = new CommandLine(app);
     CommandLine.ParseResult parseResult = cmd.parseArgs(args);
 
-    assertThat(parseResult).as("Parsing should allow -model-file with -regions-file").isNotNull();
+    assertThat(parseResult).as("Parsing should allow --model-file with --regions-file").isNotNull();
   }
 
   @Test
   void shouldUseDefaultModelWhenNeitherSpecified() {
-    // Given: CLI arguments without --model-name or -model-file
+    // Given: CLI arguments without --model-name or --model-file
     String[] args = {"--location", "us-central1", "Test prompt"};
 
     // When: Parse command
@@ -322,8 +317,8 @@ class VertexAiMasterMainTest {
       writer.println("custom-alias.provider=google");
     }
 
-    // Given: CLI arguments with -model-file
-    String[] args = {"--location", "us-central1", "-model-file", tempModelFile.getAbsolutePath(), "Test prompt"};
+    // Given: CLI arguments with --model-file
+    String[] args = {"--location", "us-central1", "--model-file", tempModelFile.getAbsolutePath(), "Test prompt"};
 
     // When: Parse command
     VertexAiMasterMain app = new VertexAiMasterMain();
@@ -355,7 +350,7 @@ class VertexAiMasterMainTest {
       return new RegionCheckResult(Map.of(request.getRegions().get(0), "SUCCESS"));
     });
 
-    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--worldwide", "-model-file", tempModelFile.toString(), "--text",
+    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--worldwide", "--model-file", tempModelFile.toString(), "--text",
         "Test prompt"};
 
     VertexAiMasterMain app = new VertexAiMasterMain(mockService, mockRegionProvider, authFactory, new OutputRedirectionManager());
@@ -368,6 +363,35 @@ class VertexAiMasterMainTest {
         .checkRegionAvailability(org.mockito.ArgumentMatchers.argThat(request -> "model.one".equals(request.getModelName())));
     verify(mockService)
         .checkRegionAvailability(org.mockito.ArgumentMatchers.argThat(request -> "model.two".equals(request.getModelName())));
+  }
+
+  @Test
+  void shouldRouteNormalGenerationModelFileToAllModels() throws Exception {
+    Path tempModelFile = Files.createTempFile("normal-models", ".properties");
+    Path tempKeyFile = Files.createTempFile("sa-key", ".json");
+    Files.writeString(tempKeyFile, "{\"type\":\"service_account\",\"project_id\":\"test-project\"}");
+
+    try (PrintWriter writer = new PrintWriter(new FileWriter(tempModelFile.toFile()))) {
+      writer.println("model.one=gemini-1.5-pro-001");
+      writer.println("model.two=gemini-1.5-flash-001");
+    }
+
+    VertexAiService mockService = mock(VertexAiService.class);
+    RegionProvider mockRegionProvider = mock(RegionProvider.class);
+    AuthenticationConfigFactory authFactory = new AuthenticationConfigFactory();
+
+    when(mockService.generateContent(any())).thenReturn(GenerationResult.success("ok"));
+
+    String[] args = {"--sa-key-file", tempKeyFile.toString(), "--location", "eu", "--model-file", tempModelFile.toString(), "--text",
+        "Test prompt"};
+
+    VertexAiMasterMain app = new VertexAiMasterMain(mockService, mockRegionProvider, authFactory, new OutputRedirectionManager());
+    CommandLine cmd = new CommandLine(app);
+
+    cmd.execute(args);
+
+    verify(mockService).generateContent(org.mockito.ArgumentMatchers.argThat(request -> "model.one".equals(request.getModelName())));
+    verify(mockService).generateContent(org.mockito.ArgumentMatchers.argThat(request -> "model.two".equals(request.getModelName())));
   }
 
   @Test

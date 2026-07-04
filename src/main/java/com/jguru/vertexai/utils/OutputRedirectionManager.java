@@ -20,10 +20,10 @@ public class OutputRedirectionManager {
   private PrintStream fileOut;
   private String outputFile;
 
-  public void setupOutputRedirection(String outputFile, boolean debug, boolean checkAllRegions, boolean worldwide) throws Exception {
+  public void setupOutputRedirection(String outputFile, boolean captureOutput) throws Exception {
     this.outputFile = outputFile;
 
-    if (this.outputFile == null && (debug || checkAllRegions || worldwide)) {
+    if (this.outputFile == null && captureOutput) {
       Path resultsDirPath = Paths.get("results");
       try {
         Files.createDirectories(resultsDirPath);

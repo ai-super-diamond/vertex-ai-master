@@ -35,16 +35,16 @@ class OutputRedirectionManagerTest {
   }
 
   @Test
-  void shouldNotRedirectWhenNoOutputFileAndNoSpecialMode() throws Exception {
-    manager.setupOutputRedirection(null, false, false, false);
+  void shouldNotRedirectWhenNoOutputFileAndNoCapture() throws Exception {
+    manager.setupOutputRedirection(null, false);
 
     PrintStream currentOut = System.out;
     assertThat(currentOut).isSameAs(originalOut);
   }
 
   @Test
-  void shouldCreateOutputFileForDebugMode() throws Exception {
-    manager.setupOutputRedirection(null, true, false, false);
+  void shouldCreateOutputFileWhenCaptureRequested() throws Exception {
+    manager.setupOutputRedirection(null, true);
 
     PrintStream currentOut = System.out;
     assertThat(currentOut).isNotSameAs(originalOut);
@@ -56,26 +56,10 @@ class OutputRedirectionManagerTest {
   }
 
   @Test
-  void shouldCreateOutputFileForCheckAllRegionsMode() throws Exception {
-    manager.setupOutputRedirection(null, false, true, false);
-
-    PrintStream currentOut = System.out;
-    assertThat(currentOut).isNotSameAs(originalOut);
-  }
-
-  @Test
-  void shouldCreateOutputFileForWorldwideMode() throws Exception {
-    manager.setupOutputRedirection(null, false, false, true);
-
-    PrintStream currentOut = System.out;
-    assertThat(currentOut).isNotSameAs(originalOut);
-  }
-
-  @Test
   void shouldRedirectToSpecifiedFile() throws Exception {
     String outputFile = tempDir.resolve("test-output.txt").toString();
 
-    manager.setupOutputRedirection(outputFile, false, false, false);
+    manager.setupOutputRedirection(outputFile, false);
 
     PrintStream currentOut = System.out;
     assertThat(currentOut).isNotSameAs(originalOut);
@@ -93,7 +77,7 @@ class OutputRedirectionManagerTest {
   void shouldRestoreOriginalStreamsAfterClose() throws Exception {
     String outputFile = tempDir.resolve("test-output.txt").toString();
 
-    manager.setupOutputRedirection(outputFile, false, false, false);
+    manager.setupOutputRedirection(outputFile, false);
     assertThat(System.out).isNotSameAs(originalOut);
 
     manager.closeOutputRedirection();
@@ -105,7 +89,7 @@ class OutputRedirectionManagerTest {
   void shouldCreateParentDirectoriesIfNeeded() throws Exception {
     String outputFile = tempDir.resolve("subdir/nested/output.txt").toString();
 
-    manager.setupOutputRedirection(outputFile, false, false, false);
+    manager.setupOutputRedirection(outputFile, false);
 
     System.out.println("Test");
     manager.closeOutputRedirection();
@@ -119,7 +103,7 @@ class OutputRedirectionManagerTest {
   void shouldHandleMultipleCloseCallsGracefully() throws Exception {
     String outputFile = tempDir.resolve("test.txt").toString();
 
-    manager.setupOutputRedirection(outputFile, false, false, false);
+    manager.setupOutputRedirection(outputFile, false);
     manager.closeOutputRedirection();
     manager.closeOutputRedirection();
 

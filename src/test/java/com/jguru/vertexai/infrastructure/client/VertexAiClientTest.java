@@ -1,5 +1,6 @@
 package com.jguru.vertexai.infrastructure.client;
 
+import com.google.genai.Client;
 import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.domain.dto.AuthenticationType;
 import com.jguru.vertexai.domain.dto.GenerationResult;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Optional;
 import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +35,25 @@ class VertexAiClientTest {
     } catch (Exception e) {
       throw new RuntimeException("Failed to set modelProperties via reflection", e);
     }
+  }
+
+  private Client buildSdkClient(String location) throws Exception {
+    AuthenticationConfig authConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId("test-project").withLocation(location).build();
+    VertexAiClient client = new VertexAiClient(authConfig);
+    com.google.auth.oauth2.GoogleCredentials credentials = mock(com.google.auth.oauth2.GoogleCredentials.class);
+
+    Method buildVertexAiClientMethod = VertexAiClient.class.getDeclaredMethod("buildVertexAiClient",
+        com.google.auth.oauth2.GoogleCredentials.class, String.class);
+    buildVertexAiClientMethod.setAccessible(true);
+    return (Client) buildVertexAiClientMethod.invoke(client, credentials, location);
+  }
+
+  private String baseUrl(Client client) throws Exception {
+    Method baseUrlMethod = Client.class.getDeclaredMethod("baseUrl");
+    baseUrlMethod.setAccessible(true);
+    Optional<?> baseUrl = (Optional<?>) baseUrlMethod.invoke(client);
+    return (String) baseUrl.orElseThrow();
   }
 
   @BeforeEach
@@ -133,6 +154,38 @@ class VertexAiClientTest {
       buildVertexAiClientMethod.invoke(client, credentials, "us-central1");
     });
     assertThat(e.getCause()).isInstanceOf(IllegalStateException.class).hasMessageContaining("Project ID is required");
+  }
+
+  @Test
+  void shouldUseMultiRegionEndpointForEuLocation() throws Exception {
+    Client genAiClient = buildSdkClient("eu");
+
+    assertThat(baseUrl(genAiClient)).isEqualTo("https://aiplatform.eu.rep.googleapis.com");
+    assertThat(genAiClient.location()).isEqualTo("eu");
+  }
+
+  @Test
+  void shouldUseMultiRegionEndpointForUsLocation() throws Exception {
+    Client genAiClient = buildSdkClient("us");
+
+    assertThat(baseUrl(genAiClient)).isEqualTo("https://aiplatform.us.rep.googleapis.com");
+    assertThat(genAiClient.location()).isEqualTo("us");
+  }
+
+  @Test
+  void shouldUseVertexAiRoutingForRegionalLocation() throws Exception {
+    Client genAiClient = buildSdkClient("us-central1");
+
+    assertThat(baseUrl(genAiClient)).isEqualTo("https://us-central1-aiplatform.googleapis.com");
+    assertThat(genAiClient.location()).isEqualTo("us-central1");
+  }
+
+  @Test
+  void shouldKeepGlobalOnVertexAiRouting() throws Exception {
+    Client genAiClient = buildSdkClient("global");
+
+    assertThat(baseUrl(genAiClient)).isEqualTo("https://aiplatform.googleapis.com");
+    assertThat(genAiClient.location()).isEqualTo("global");
   }
 
   @Test

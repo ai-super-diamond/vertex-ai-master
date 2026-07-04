@@ -220,12 +220,10 @@ public class VertexAiClient implements ModelClient {
     }
 
     Client.Builder clientBuilder = Client.builder().project(projectId).location(clientLocation).vertexAI(true);
-
     if (credentials != null) {
-      return clientBuilder.credentials(credentials).build();
-    } else {
-      return clientBuilder.build();
+      clientBuilder = clientBuilder.credentials(credentials);
     }
+    return clientBuilder.build();
   }
 
   /**
