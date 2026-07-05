@@ -1,7 +1,7 @@
 #!/bin/bash
 # Configuration
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-KEY=../keys/sa_key.json
+KEY="$SCRIPT_DIR/../keys/sa_key.json"
 PROMPT="200+200*99=?"
 MODELS_FILE="$SCRIPT_DIR/models.properties"
 REGIONS_FILE="$SCRIPT_DIR/regions.properties"
@@ -24,3 +24,4 @@ echo ""
 echo "========================================"
 echo "Worldwide test completed"
 echo "========================================"
+read -r -p "Press Enter to continue . . ." _

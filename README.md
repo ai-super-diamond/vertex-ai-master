@@ -47,7 +47,7 @@ cd vertex-ai-master
 mvn clean package -DskipTests
 ```
 
-The resulting JAR will be located at `target/vertex-1.0.1.jar`.
+The build produces the versioned JAR under `target/` and stages a stable runtime copy at `bin/vertex-latest.jar`.
 
 ### Building the Native Executable (Windows)
 
@@ -65,7 +65,7 @@ This script runs the Maven native profile and moves the generated `vertex.exe` t
 
 ```powershell
 # Using the Java JAR directly
-java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --location us-central1 -m gemini.pro "What is the capital of France?"
+java -jar bin/vertex-latest.jar --sa-key-file keys/sa_key.json --location us-central1 -m gemini.pro "What is the capital of France?"
 
 # Or using the native executable (if built)
 .\bin\vertex.exe --sa-key-file keys\sa_key.json --location us-central1 -m gemini.pro "What is the capital of France?"
@@ -79,7 +79,7 @@ java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --location us-c
     ```
 2.  **Service Account Key:**
     ```powershell
-    java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json -m gemini.pro "Analyze this code."
+java -jar bin/vertex-latest.jar --sa-key-file keys/sa_key.json -m gemini.pro "Analyze this code."
     ```
 3.  **Application Default Credentials (ADC):**
     ```powershell
@@ -98,17 +98,17 @@ java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --location us-c
 
 **Check a model across a specific cluster (US/EU/ASIA/MIDDLE_EAST/AFRICA/CANADA/SOUTH_AMERICA/GLOBAL):**
 ```powershell
-java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --check-all-regions --cluster US -m gemini.pro "Test"
+java -jar bin/vertex-latest.jar --sa-key-file keys/sa_key.json --check-all-regions --cluster US -m gemini.pro "Test"
 ```
 
 **Worldwide availability check (all 42+ regions):**
 ```powershell
-java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --worldwide -m gemini.pro "Connectivity test"
+java -jar bin/vertex-latest.jar --sa-key-file keys/sa_key.json --worldwide -m gemini.pro "Connectivity test"
 ```
 
 **Global endpoint check (models served only on the global endpoint):**
 ```powershell
-java -jar target/vertex-1.0.1.jar --sa-key-file keys/sa_key.json --check-all-regions --cluster GLOBAL -m anthropic.sonnet5 "Test"
+java -jar bin/vertex-latest.jar --sa-key-file keys/sa_key.json --check-all-regions --cluster GLOBAL -m anthropic.sonnet5 "Test"
 ```
 
 **Debug Mode:**
@@ -186,7 +186,7 @@ mvn spotless:apply   # Auto-fix formatting
 │   │   └── resources/      # Default models.properties and logging setup
 │   └── test/               # Unit and Integration test suites
 ├── pom.xml                 # Maven project definition
-└── rebuild.cmd             # Master build script
+└── bin/build-jar.cmd       # Windows helper to package and stage vertex-latest.jar
 ```
 
 ## 🏛️ Architecture

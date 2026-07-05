@@ -119,5 +119,10 @@ if [ "$FAIL_COUNT" -gt 0 ]; then
 else
     echo ""
     echo "No blocking issues found."
-    exit 0
 fi
+
+read -r -p "Press Enter to continue . . ." _
+if [ "$FAIL_COUNT" -gt 0 ]; then
+    exit 1
+fi
+exit 0

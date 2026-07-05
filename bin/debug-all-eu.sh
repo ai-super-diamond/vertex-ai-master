@@ -1,9 +1,9 @@
 #!/bin/bash
 # Configuration
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-KEY=../keys/sa_key.json
+KEY="$SCRIPT_DIR/../keys/sa_key.json"
 PROMPT="200+200*99=?"
-MODELS_FILE=models.properties
+MODELS_FILE="$SCRIPT_DIR/models.properties"
 
 echo "========================================"
 echo "Testing All Models in EU Regions (DEBUG MODE)"
@@ -22,17 +22,16 @@ echo "Testing all models from file (with debug info)"
 echo "========================================"
 echo ""
 
-# Ensure shaded JAR exists; build if missing
-if [ ! -f "$SCRIPT_DIR/../target/vertex-1.0.1.jar" ]; then
+# Ensure runtime JAR exists; build if missing
+if [ ! -f "$SCRIPT_DIR/vertex-latest.jar" ]; then
   echo "JAR not found. Building project..."
-  ( cd "$SCRIPT_DIR/.." && mvn clean package -DskipTests )
+  "$SCRIPT_DIR/build-jar.sh" || exit 1
 fi
 
-java -jar "$SCRIPT_DIR/../target/vertex-1.0.1.jar" --sa-key-file "$KEY" --check-all-regions --cluster EU --model-file "$MODELS_FILE" --text "$PROMPT" --debug
+java -jar "$SCRIPT_DIR/vertex-latest.jar" --sa-key-file "$KEY" --check-all-regions --cluster EU --model-file "$MODELS_FILE" --text "$PROMPT" --debug
 
 echo ""
 echo "========================================"
 echo "All model tests completed (debug mode)"
 echo "========================================"
-read -n 1 -s -r -p "Press any key to continue . . ."
-echo ""
+read -r -p "Press Enter to continue . . ." _

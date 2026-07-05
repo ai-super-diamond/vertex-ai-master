@@ -1,8 +1,11 @@
 @echo off
+setlocal
 REM Configuration
-set KEY=..\keys\sa_key.json
+set SCRIPT_DIR=%~dp0
+if "%SCRIPT_DIR:~-1%"=="\" set SCRIPT_DIR=%SCRIPT_DIR:~0,-1%
+set KEY=%SCRIPT_DIR%\..\keys\sa_key.json
 set PROMPT=200+200*99=?
-set MODELS_FILE=models.properties
+set MODELS_FILE=%SCRIPT_DIR%\models.properties
 
 echo ========================================
 echo Testing All Models in EU Regions (DEBUG MODE)
@@ -20,15 +23,17 @@ echo ========================================
 echo Testing all models from file (with debug info)
 echo ========================================
 echo.
-REM Ensure shaded JAR exists; build if missing
-if not exist "..\target\vertex-1.0.1.jar" (
+REM Ensure runtime JAR exists; build if missing
+if not exist "%SCRIPT_DIR%\vertex-latest.jar" (
   echo JAR not found. Building project...
-  pushd ..
-  call mvn clean package -DskipTests
-  popd
+  call "%SCRIPT_DIR%\build-jar.cmd"
+  if errorlevel 1 (
+    pause
+    exit /b 1
+  )
 )
 
-java -jar ..\target\vertex-1.0.1.jar --sa-key-file %KEY% --check-all-regions --cluster EU --model-file %MODELS_FILE% --text "%PROMPT%" --debug
+java -jar "%SCRIPT_DIR%\vertex-latest.jar" --sa-key-file "%KEY%" --check-all-regions --cluster EU --model-file "%MODELS_FILE%" --text "%PROMPT%" --debug
 
 echo.
 echo ========================================

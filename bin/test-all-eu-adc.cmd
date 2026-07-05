@@ -2,7 +2,7 @@
 REM Configuration
 set PROJECT=mio15-project
 set PROMPT=200+200*99=?
-set MODELS_FILE=models.properties
+set MODELS_FILE=%~dp0models.properties
 
 echo ========================================
 echo Testing All Models in EU Regions (ADC)
@@ -24,9 +24,10 @@ echo Testing all models from file
 echo ========================================
 echo.
 
-java -jar "%~dp0vertex-latest.jar" --adc --project %PROJECT% --check-all-regions --cluster EU --model-file %MODELS_FILE% --text "%PROMPT%"
+java -jar "%~dp0vertex-latest.jar" --adc --project "%PROJECT%" --check-all-regions --cluster EU --model-file "%MODELS_FILE%" --text "%PROMPT%"
 
 echo.
 echo ========================================
 echo All model tests completed
 echo ========================================
+pause

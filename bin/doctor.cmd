@@ -125,11 +125,11 @@ echo Warnings: %WARN_COUNT%
 if %FAIL_COUNT% GTR 0 (
     echo.
     echo Doctor found blocking issues. Fix the [FAIL] items above before running the CLI.
-	pause
+    pause
     exit /b 1
 ) else (
     echo.
     echo No blocking issues found.
-	pause
+    pause
     exit /b 0
 )

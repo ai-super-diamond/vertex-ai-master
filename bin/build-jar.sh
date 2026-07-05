@@ -32,7 +32,9 @@ fi
 echo ""
 echo "--- Maven Build Successful ---"
 
-JAR_FILE=$(ls target/vertex-*.jar 2>/dev/null | grep -v -- "-shaded.jar" | head -n 1)
+JAR_FILE=$(find target -maxdepth 1 -type f -name 'vertex-*.jar' \
+    ! -name '*-shaded.jar' \
+    ! -name '*dependency-reduced*.jar' | head -n 1)
 
 if [ -z "$JAR_FILE" ]; then
     echo ""
@@ -45,4 +47,9 @@ echo "--- Build Complete ---"
 echo "JAR location: $PROJECT_ROOT/$JAR_FILE"
 
 cp -f "$JAR_FILE" "$SCRIPT_DIR/vertex-latest.jar"
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to copy $JAR_FILE to $SCRIPT_DIR/vertex-latest.jar."
+    exit 1
+fi
 echo "Copied to: $SCRIPT_DIR/vertex-latest.jar"
+read -r -p "Press Enter to continue . . ." _

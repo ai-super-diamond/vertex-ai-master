@@ -15,6 +15,7 @@ REM Verify that pom.xml exists at the project root
 if not exist "%PROJECT_ROOT%\pom.xml" (
     echo ERROR: pom.xml not found at project root: %PROJECT_ROOT%
     echo Please ensure the script is located in the bin/ directory of the project.
+    pause
     exit /b 1
 )
 
@@ -37,6 +38,7 @@ if errorlevel 1 (
     echo.
     echo ERROR: Maven build failed. Please check the error messages above.
     popd
+    pause
     exit /b 1
 )
 
@@ -54,6 +56,7 @@ if exist "target\vertex.exe" (
     if errorlevel 1 (
         echo ERROR: Failed to move vertex.exe from target to bin directory.
         popd
+        pause
         exit /b 1
     )
 
@@ -66,6 +69,7 @@ if exist "target\vertex.exe" (
     echo Expected location: %PROJECT_ROOT%\target\vertex.exe
     echo Alternative location: %SCRIPT_DIR%\vertex.exe
     popd
+    pause
     exit /b 1
 )
 
@@ -76,3 +80,4 @@ echo.
 echo --- Build Complete ---
 echo Your executable 'vertex.exe' is ready in the bin directory.
 echo Location: %SCRIPT_DIR%\vertex.exe
+pause
