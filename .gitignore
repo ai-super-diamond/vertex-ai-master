@@ -68,3 +68,4 @@ tools/talisman/talisman.exe
 results/runtime-results-*.txt
 /bin/vertex.exe
 .qoder
+.kilo/
