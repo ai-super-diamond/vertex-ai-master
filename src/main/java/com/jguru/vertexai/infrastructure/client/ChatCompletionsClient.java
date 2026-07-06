@@ -3,6 +3,7 @@ package com.jguru.vertexai.infrastructure.client;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.HttpOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +15,7 @@ import java.io.IOException;
 public class ChatCompletionsClient {
 
   private static final Logger logger = LoggerFactory.getLogger(ChatCompletionsClient.class);
+  private static final int REQUEST_TIMEOUT_MILLIS = 30_000;
   private final Client client;
 
   /**
@@ -27,7 +29,8 @@ public class ChatCompletionsClient {
    *          Google credentials for authentication
    */
   public ChatCompletionsClient(String projectId, String location, GoogleCredentials credentials) {
-    this.client = Client.builder().project(projectId).location(location).credentials(credentials).vertexAI(true).build();
+    this.client = Client.builder().project(projectId).location(location).credentials(credentials).vertexAI(true)
+        .httpOptions(HttpOptions.builder().timeout(REQUEST_TIMEOUT_MILLIS).build()).build();
     logger.debug("ChatCompletionsClient initialized with Gen AI SDK (Project: {}, Location: {})", projectId, location);
   }
 
