@@ -3,6 +3,7 @@ package com.jguru.vertexai.infrastructure.client;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.HttpOptions;
 import com.jguru.vertexai.service.ModelClient;
 import com.jguru.vertexai.domain.dto.AuthenticationConfig;
 import com.jguru.vertexai.domain.dto.AuthenticationType;
@@ -24,6 +25,7 @@ public class VertexAiClient implements ModelClient {
   private final Properties modelProperties;
 
   private static final Logger logger = LoggerFactory.getLogger(VertexAiClient.class);
+  private static final int REQUEST_TIMEOUT_MILLIS = 30_000;
 
   public VertexAiClient(AuthenticationConfig authConfig) {
     this.authConfig = authConfig;
@@ -219,7 +221,8 @@ public class VertexAiClient implements ModelClient {
       throw new IllegalStateException("Location is required for Vertex AI client");
     }
 
-    Client.Builder clientBuilder = Client.builder().project(projectId).location(clientLocation).vertexAI(true);
+    Client.Builder clientBuilder = Client.builder().project(projectId).location(clientLocation).vertexAI(true)
+        .httpOptions(HttpOptions.builder().timeout(REQUEST_TIMEOUT_MILLIS).build());
     if (credentials != null) {
       clientBuilder = clientBuilder.credentials(credentials);
     }
@@ -240,7 +243,8 @@ public class VertexAiClient implements ModelClient {
   public String callVertexAi(String modelName, String text) throws ApiCallException {
     if (authConfig.getType() == AuthenticationType.API_KEY) {
       // Use API Key authentication (Gemini API)
-      try (Client client = Client.builder().apiKey(authConfig.getApiKey()).build()) {
+      try (Client client = Client.builder().apiKey(authConfig.getApiKey())
+          .httpOptions(HttpOptions.builder().timeout(REQUEST_TIMEOUT_MILLIS).build()).build()) {
         GenerateContentResponse response = client.models.generateContent(modelName, text, null);
         return response.text();
       } catch (Exception e) {
