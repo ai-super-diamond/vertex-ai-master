@@ -347,6 +347,14 @@ public class VertexAiClient implements ModelClient {
         credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
       }
 
+      if ("anthropic".equalsIgnoreCase(provider)) {
+        // Anthropic models are not exposed through the standard generateContent surface; they require the
+        // native rawPredict/Messages API.
+        AnthropicVertexClient anthropicClient = new AnthropicVertexClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
+        String response = anthropicClient.generateContent(modelName, textPrompt);
+        return GenerationResult.builder().withText(response).build();
+      }
+
       ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
 
       // For models with OpenAI flag, prepend the provider prefix
