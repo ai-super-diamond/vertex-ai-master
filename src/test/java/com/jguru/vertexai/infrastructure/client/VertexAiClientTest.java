@@ -262,6 +262,26 @@ class VertexAiClientTest {
   }
 
   @Test
+  void shouldRouteToAnthropicWhenProviderIsAnthropic() throws Exception {
+    // Given: Custom properties injected via reflection helper
+    Properties customProps = new Properties();
+    customProps.setProperty("anthropic-model", "anthropic-model-full");
+    customProps.setProperty("anthropic-model.provider", "anthropic");
+    setModelProperties(spyClient, customProps);
+
+    // And: We stub the protected method
+    doReturn(mockResult).when(spyClient).callAnthropicVertexAi(eq("anthropic-model-full"), eq("a prompt"));
+
+    // When: The public method is called
+    spyClient.callVertexAi("anthropic-model", "a prompt");
+
+    // Then: Verify that ONLY the anthropic transport was invoked
+    verify(spyClient, times(1)).callAnthropicVertexAi(eq("anthropic-model-full"), eq("a prompt"));
+    verify(spyClient, never()).callChatCompletionsApi(anyString(), anyString(), anyString());
+    verify(spyClient, never()).callStandardVertexAi(anyString(), anyString());
+  }
+
+  @Test
   void shouldRouteToChatCompletionsWhenOpenAIFlagIsPresent() throws Exception {
     // Given: Custom properties injected via reflection helper
     Properties customProps = new Properties();

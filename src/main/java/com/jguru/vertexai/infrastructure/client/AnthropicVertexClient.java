@@ -23,7 +23,7 @@ public class AnthropicVertexClient {
 
   private static final Logger logger = LoggerFactory.getLogger(AnthropicVertexClient.class);
   private static final String ANTHROPIC_VERSION = "vertex-2023-10-16";
-  private static final int MAX_TOKENS = 1024;
+  private static final int MAX_TOKENS = 8192;
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
   private final String projectId;
@@ -32,6 +32,9 @@ public class AnthropicVertexClient {
   private final HttpClient httpClient;
 
   public AnthropicVertexClient(String projectId, String location, GoogleCredentials credentials) {
+    if (location == null || location.isBlank()) {
+      throw new IllegalStateException("Location is required for Anthropic Vertex AI client");
+    }
     this.projectId = projectId;
     this.location = location;
     this.credentials = credentials;

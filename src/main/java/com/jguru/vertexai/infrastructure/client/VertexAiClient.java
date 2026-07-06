@@ -263,6 +263,13 @@ public class VertexAiClient implements ModelClient {
       // Resolve full model name early
       String fullModelName = modelProperties.getProperty(modelName, modelName);
 
+      if ("anthropic".equalsIgnoreCase(providerPrefix)) {
+        // Anthropic models are not exposed through the standard generateContent surface; they require the
+        // native rawPredict/Messages API.
+        GenerationResult result = callAnthropicVertexAi(fullModelName, text);
+        return result.getText();
+      }
+
       // Also check for explicit OpenAI flag as fallback
       if (!useChatCompletions) {
         String openAiFlag = modelProperties.getProperty(modelName + ".openai");
@@ -323,6 +330,47 @@ public class VertexAiClient implements ModelClient {
   }
 
   /**
+   * Calls the Anthropic Claude models via Vertex AI's native rawPredict endpoint.
+   *
+   * @param modelName
+   *          The model to use
+   * @param textPrompt
+   *          The prompt text
+   * @return GenerationResult containing the response
+   * @throws IOException
+   *           If the API call fails
+   */
+  protected GenerationResult callAnthropicVertexAi(String modelName, String textPrompt) throws ApiCallException {
+    try {
+      GoogleCredentials credentials = loadCredentials();
+
+      logger.info("Using Anthropic rawPredict API for model: {}", modelName);
+
+      if (credentials == null) {
+        // Use ADC for the Anthropic client
+        credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
+      }
+
+      String effectiveLocation = resolveEffectiveLocation(modelName);
+      AnthropicVertexClient anthropicClient = new AnthropicVertexClient(authConfig.getProjectId(), effectiveLocation, credentials);
+      String response = anthropicClient.generateContent(modelName, textPrompt);
+      return GenerationResult.builder().withText(response).build();
+    } catch (IOException e) {
+      // Provide helpful error hints for common errors
+      String errorMessage = e.getMessage();
+      if (errorMessage != null) {
+        if (errorMessage.contains("404") || errorMessage.contains("not found")) {
+          errorMessage += " (Hint: Model may not be enabled in your GCP project. Check the model card and click 'Enable'.)";
+        } else if (errorMessage.contains("403") || errorMessage.contains("permission denied")) {
+          errorMessage += " (Hint: Check that your credentials have been granted necessary IAM permissions for Vertex AI.)";
+        }
+      }
+      ApiCallException.ErrorType errorType = ApiCallException.categorizeError(errorMessage);
+      throw new ApiCallException(errorMessage != null ? errorMessage : "Unknown error", e, modelName, errorType);
+    }
+  }
+
+  /**
    * Calls the Chat Completions API for MaaS and OpenAI models.
    *
    * @param provider
@@ -345,14 +393,6 @@ public class VertexAiClient implements ModelClient {
       if (credentials == null) {
         // Use ADC for Chat Completions
         credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
-      }
-
-      if ("anthropic".equalsIgnoreCase(provider)) {
-        // Anthropic models are not exposed through the standard generateContent surface; they require the
-        // native rawPredict/Messages API.
-        AnthropicVertexClient anthropicClient = new AnthropicVertexClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
-        String response = anthropicClient.generateContent(modelName, textPrompt);
-        return GenerationResult.builder().withText(response).build();
       }
 
       ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
