@@ -99,10 +99,19 @@ fi
 
 # --- results directory writable ---
 if [ ! -d "$SCRIPT_DIR/results" ]; then
-    echo "[WARN] results/ directory does not exist yet; it will be created on first run."
-    WARN_COUNT=$((WARN_COUNT + 1))
+  echo "[WARN] results/ directory does not exist yet; it will be created on first run."
+  WARN_COUNT=$((WARN_COUNT + 1))
 else
-    echo "[ OK ] results/ directory present."
+  echo "[ OK ] results/ directory present."
+fi
+
+# --- Talisman hook ---
+HOOKS_PATH=$(git config core.hooksPath 2>/dev/null || echo ".git/hooks")
+if [ -f "$PROJECT_ROOT/$HOOKS_PATH/pre-commit" ]; then
+  echo "[ OK ] Talisman pre-commit hook installed."
+else
+  echo "[WARN] Talisman hook not configured. Run: git config core.hooksPath hooks"
+  WARN_COUNT=$((WARN_COUNT + 1))
 fi
 
 echo ""

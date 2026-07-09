@@ -1,7 +1,6 @@
 #!/bin/bash
 # Talisman Pre-Commit Hook (cross-platform, downloads binary on-demand)
-set -e
-REPO_ROOT=$(git rev-parse --show-toplevel)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 TALISMAN_DIR="$REPO_ROOT/tools/talisman"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -21,13 +20,18 @@ BINARY="$TALISMAN_DIR/talisman_${OS}_${ARCH}${EXT}"
 if [ ! -f "$BINARY" ]; then
   echo "[INFO] Downloading Talisman $OS/$ARCH binary..."
   mkdir -p "$TALISMAN_DIR"
-  URL="https://github.com/thoughtworks/talisman/releases/download/v1.37.0/talisman_${OS}_${ARCH}${EXT}"
-  curl -sL "$URL" -o "$BINARY"
-  if [ $? -ne 0 ] || [ ! -f "$BINARY" ]; then
+  VERSION=$(curl -s "https://api.github.com/repos/thoughtworks/talisman/releases/latest" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+  if [ -z "$VERSION" ]; then
+    VERSION="v1.37.0"
+  fi
+  URL="https://github.com/thoughtworks/talisman/releases/download/${VERSION}/talisman_${OS}_${ARCH}${EXT}"
+  if curl -sL "$URL" -o "$BINARY" 2>/dev/null && [ -f "$BINARY" ]; then
+    [ "$OS" != "windows" ] && chmod +x "$BINARY" 2>/dev/null || true
+  else
     echo "[WARN] Talisman binary download failed for $OS/$ARCH. Skipping."
+    rm -f "$BINARY" 2>/dev/null
     exit 0
   fi
-  [ "$OS" != "windows" ] && chmod +x "$BINARY" 2>/dev/null || true
 fi
 
 echo "Running Talisman Secret Scanner..."
