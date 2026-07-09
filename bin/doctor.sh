@@ -105,12 +105,12 @@ else
   echo "[ OK ] results/ directory present."
 fi
 
-# --- Gitleaks hook ---
+# --- Betterleaks hook ---
 HOOKS_PATH=$(git config core.hooksPath 2>/dev/null || echo ".git/hooks")
 if [ -f "$PROJECT_ROOT/$HOOKS_PATH/pre-commit" ]; then
-  echo "[ OK ] Gitleaks pre-commit hook installed."
+  echo "[ OK ] Betterleaks pre-commit hook installed."
 else
-  echo "[WARN] Gitleaks hook not configured. Run: git config core.hooksPath hooks"
+  echo "[WARN] Betterleaks hook not configured. Run: git config core.hooksPath hooks"
   WARN_COUNT=$((WARN_COUNT + 1))
 fi
 
