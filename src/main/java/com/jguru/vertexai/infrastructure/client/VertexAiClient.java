@@ -186,6 +186,26 @@ public class VertexAiClient implements ModelClient {
   }
 
   /**
+   * Resolves the project ID to use, falling back to the project embedded in service account credentials when none is configured explicitly.
+   *
+   * @param credentials
+   *          The credentials to use (may be null)
+   * @return The resolved, non-blank project ID
+   */
+  private String resolveProjectId(GoogleCredentials credentials) {
+    String projectId = authConfig.getProjectId();
+    if ((projectId == null || projectId.isBlank()) && credentials instanceof com.google.auth.oauth2.ServiceAccountCredentials) {
+      projectId = ((com.google.auth.oauth2.ServiceAccountCredentials) credentials).getProjectId();
+      logger.debug("Extracted project ID from service account credentials: {}", projectId);
+    }
+    if (projectId == null || projectId.isBlank()) {
+      throw new IllegalStateException("Project ID is required for Vertex AI client. "
+          + "Use a service account key file that contains project_id or configure ADC with a project ID.");
+    }
+    return projectId;
+  }
+
+  /**
    * Builds a Vertex AI client with the appropriate configuration.
    *
    * @param credentials
@@ -202,20 +222,7 @@ public class VertexAiClient implements ModelClient {
       clientLocation = "global";
     }
 
-    // Validate required parameters
-    String projectId = authConfig.getProjectId();
-
-    // If project ID is not provided, try to extract it from credentials if
-    // available
-    if ((projectId == null || projectId.isBlank()) && credentials instanceof com.google.auth.oauth2.ServiceAccountCredentials) {
-      projectId = ((com.google.auth.oauth2.ServiceAccountCredentials) credentials).getProjectId();
-      logger.debug("Extracted project ID from service account credentials: {}", projectId);
-    }
-
-    if (projectId == null || projectId.isBlank()) {
-      throw new IllegalStateException("Project ID is required for Vertex AI client. "
-          + "Use a service account key file that contains project_id or configure ADC with a project ID.");
-    }
+    String projectId = resolveProjectId(credentials);
 
     if (clientLocation == null || clientLocation.isBlank()) {
       throw new IllegalStateException("Location is required for Vertex AI client");
@@ -352,10 +359,11 @@ public class VertexAiClient implements ModelClient {
       }
 
       String effectiveLocation = resolveEffectiveLocation(modelName);
-      AnthropicVertexClient anthropicClient = new AnthropicVertexClient(authConfig.getProjectId(), effectiveLocation, credentials);
+      String projectId = resolveProjectId(credentials);
+      AnthropicVertexClient anthropicClient = new AnthropicVertexClient(projectId, effectiveLocation, credentials);
       String response = anthropicClient.generateContent(modelName, textPrompt);
       return GenerationResult.builder().withText(response).build();
-    } catch (IOException e) {
+    } catch (Exception e) {
       // Provide helpful error hints for common errors
       String errorMessage = e.getMessage();
       if (errorMessage != null) {
@@ -395,7 +403,7 @@ public class VertexAiClient implements ModelClient {
         credentials = GoogleCredentials.getApplicationDefault().createScoped("https://www.googleapis.com/auth/cloud-platform");
       }
 
-      ChatCompletionsClient chatClient = new ChatCompletionsClient(authConfig.getProjectId(), authConfig.getLocation(), credentials);
+      String projectId = resolveProjectId(credentials);
 
       // For models with OpenAI flag, prepend the provider prefix
       // For MaaS models, prepend the provider prefix
@@ -407,9 +415,12 @@ public class VertexAiClient implements ModelClient {
         logger.info("Model name with provider: {}", modelWithPrefix);
       }
 
-      String response = chatClient.generateContent(modelWithPrefix, textPrompt);
+      String response;
+      try (ChatCompletionsClient chatClient = new ChatCompletionsClient(projectId, authConfig.getLocation(), credentials)) {
+        response = chatClient.generateContent(modelWithPrefix, textPrompt);
+      }
       return GenerationResult.builder().withText(response).build();
-    } catch (IOException e) {
+    } catch (Exception e) {
       // Provide helpful error hints for common errors
       String errorMessage = e.getMessage();
       if (errorMessage != null) {

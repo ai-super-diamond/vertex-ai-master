@@ -12,7 +12,7 @@ import java.io.IOException;
 /**
  * Client for interacting with Vertex AI using the official Google Gen AI SDK. Replaces manual HTTP/JSON handling with idiomatic SDK calls.
  */
-public class ChatCompletionsClient {
+public class ChatCompletionsClient implements AutoCloseable {
 
   private static final Logger logger = LoggerFactory.getLogger(ChatCompletionsClient.class);
   private static final int REQUEST_TIMEOUT_MILLIS = 30_000;
@@ -67,5 +67,10 @@ public class ChatCompletionsClient {
 
       throw new IOException("Failed to generate content: " + message, e);
     }
+  }
+
+  @Override
+  public void close() {
+    client.close();
   }
 }
