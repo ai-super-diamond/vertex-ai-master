@@ -1,0 +1,34 @@
+#!/bin/bash
+# Talisman Pre-Commit Hook (cross-platform, downloads binary on-demand)
+set -e
+REPO_ROOT=$(git rev-parse --show-toplevel)
+TALISMAN_DIR="$REPO_ROOT/tools/talisman"
+
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+
+case "$OS" in
+  mingw*|msys*|cygwin*) OS="windows" ;;
+esac
+case "$ARCH" in
+  x86_64|amd64) ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+esac
+
+[ "$OS" = "windows" ] && EXT=".exe" || EXT=""
+BINARY="$TALISMAN_DIR/talisman_${OS}_${ARCH}${EXT}"
+
+if [ ! -f "$BINARY" ]; then
+  echo "[INFO] Downloading Talisman $OS/$ARCH binary..."
+  mkdir -p "$TALISMAN_DIR"
+  URL="https://github.com/thoughtworks/talisman/releases/download/v1.37.0/talisman_${OS}_${ARCH}${EXT}"
+  curl -sL "$URL" -o "$BINARY"
+  if [ $? -ne 0 ] || [ ! -f "$BINARY" ]; then
+    echo "[WARN] Talisman binary download failed for $OS/$ARCH. Skipping."
+    exit 0
+  fi
+  [ "$OS" != "windows" ] && chmod +x "$BINARY" 2>/dev/null || true
+fi
+
+echo "Running Talisman Secret Scanner..."
+"$BINARY" --githook pre-commit

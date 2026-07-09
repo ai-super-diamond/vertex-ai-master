@@ -42,6 +42,9 @@ Windows and cross-platform helper scripts:
 - `.\bin\build-exe.cmd`
 - `.\bin\doctor.cmd` / `./bin/doctor.sh` (checks Maven, Java, jar, properties, key,
   gcloud CLI, and ADC credentials)
+- Talisman hook: `git config core.hooksPath hooks` (once per clone) installs
+  the pre-commit hook from `hooks/pre-commit` for secret scanning.
+  The hook downloads the Talisman binary on first run.
 
 ## Testing
 
