@@ -42,9 +42,11 @@ Windows and cross-platform helper scripts:
 - `.\bin\build-exe.cmd`
 - `.\bin\doctor.cmd` / `./bin/doctor.sh` (checks Maven, Java, jar, properties, key,
   gcloud CLI, and ADC credentials)
-- Gitleaks hook: `git config core.hooksPath hooks` (once per clone) installs
+- Betterleaks hook: `git config core.hooksPath hooks` (once per clone) installs
   the pre-commit hook from `hooks/pre-commit` for staged secret scanning.
-  The hook downloads Gitleaks on first run.
+  The hook downloads Betterleaks on first run. Detector set lives in
+  `.betterleaks.toml` (extends the default rules); the test-fixture service
+  account keys in `keys/` are allowlisted by path.
 
 ## Testing
 
