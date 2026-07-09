@@ -34,5 +34,15 @@ if [ ! -f "$BINARY" ]; then
   fi
 fi
 
+# Talisman parses `git diff --staged` output, so force plain (uncolored) diff
+# output. A global `color.ui = always` (or `color.diff = always`) would
+# otherwise embed ANSI escapes that Talisman cannot parse, causing it to scan
+# zero additions and silently let secrets through.
+export GIT_CONFIG_COUNT=2
+export GIT_CONFIG_KEY_0=color.ui
+export GIT_CONFIG_VALUE_0=false
+export GIT_CONFIG_KEY_1=color.diff
+export GIT_CONFIG_VALUE_1=false
+
 echo "Running Talisman Secret Scanner..."
 "$BINARY" --githook pre-commit
