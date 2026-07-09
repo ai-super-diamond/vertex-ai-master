@@ -53,6 +53,9 @@ keys/sa_key.json
 !package.json
 !tsconfig.json
 
+### Talisman Binaries (downloaded on-demand) ###
+tools/talisman/talisman_*
+
 ### Test Result Files ###
 *.csv
 model-test-results_*.csv
@@ -61,7 +64,6 @@ region-discovery_*.csv
 
 ### Results Directory ###
 results/
-tools/talisman/talisman.exe
 .talismanrc
 
 ### Runtime Results ###
