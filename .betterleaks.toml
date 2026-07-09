@@ -1,0 +1,10 @@
+# Keep Betterleaks' bundled rules active and add a path allowlist for the
+# test fixture service-account keys that are committed to the repo.
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''keys/sa_key\.json''',
+  '''keys/expired\.json''',
+]

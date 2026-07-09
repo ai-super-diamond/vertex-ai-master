@@ -53,11 +53,11 @@ keys/sa_key.json
 !package.json
 !tsconfig.json
 
-### Gitleaks Binaries (downloaded on-demand) ###
-tools/gitleaks/gitleaks*
-tools/gitleaks/*.zip
-tools/gitleaks/*.tar.gz
-!tools/gitleaks/.gitkeep
+### Betterleaks Binaries (downloaded on-demand) ###
+tools/betterleaks/betterleaks*
+tools/betterleaks/*.zip
+tools/betterleaks/*.tar.gz
+!tools/betterleaks/.gitkeep
 
 ### Test Result Files ###
 *.csv
