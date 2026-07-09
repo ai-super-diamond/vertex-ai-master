@@ -178,6 +178,9 @@ public class VertexAiClient implements ModelClient {
    */
   private String resolveEffectiveLocation(String modelName) {
     String effectiveLocation = authConfig.getLocation();
+    if (authConfig.isSkipModelRegionOverride()) {
+      return effectiveLocation;
+    }
     String modelRegion = getModelRegion(modelName);
     if (modelRegion != null && !modelRegion.isBlank()) {
       effectiveLocation = modelRegion;

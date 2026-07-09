@@ -152,7 +152,9 @@ public class VertexAiServiceImpl implements VertexAiService {
 
   private AuthenticationConfig buildRegionAuthenticationConfig(AuthenticationConfig baseConfig, String projectId, String saKeyFile,
       String region) {
-    AuthenticationConfig.Builder builder = AuthenticationConfig.builder().withType(baseConfig.getType());
+    // A region-availability scan is testing a specific region per call; a model's configured
+    // .region override must not silently redirect that probe to a different, pinned endpoint.
+    AuthenticationConfig.Builder builder = AuthenticationConfig.builder().withType(baseConfig.getType()).withSkipModelRegionOverride(true);
 
     switch (baseConfig.getType()) {
       case API_KEY :

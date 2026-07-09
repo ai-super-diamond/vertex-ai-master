@@ -469,4 +469,27 @@ class VertexAiClientTest {
     // "us-central1"
     verify(spyClient, times(1)).callStandardVertexAi(eq("us-east5-model-name"), eq("a prompt"));
   }
+
+  @Test
+  void shouldSkipModelRegionOverrideWhenAuthConfigRequestsIt() throws Exception {
+    // Given: A model pinned to "us-east5" via its .region property, but an
+    // authConfig used by a per-region availability scan that opts out of the
+    // override so each probed region is actually tested.
+    Properties customProps = new Properties();
+    customProps.setProperty("us-east5-model", "us-east5-model-name");
+    customProps.setProperty("us-east5-model.region", "us-east5");
+
+    AuthenticationConfig scanConfig = AuthenticationConfig.builder().withType(AuthenticationType.SERVICE_ACCOUNT_ADC)
+        .withProjectId("test-project").withLocation("europe-west1").withSkipModelRegionOverride(true).build();
+    VertexAiClient scanClient = new VertexAiClient(scanConfig);
+    setModelProperties(scanClient, customProps);
+
+    // When: resolveEffectiveLocation is invoked for the pinned model
+    Method resolveEffectiveLocationMethod = VertexAiClient.class.getDeclaredMethod("resolveEffectiveLocation", String.class);
+    resolveEffectiveLocationMethod.setAccessible(true);
+    String effectiveLocation = (String) resolveEffectiveLocationMethod.invoke(scanClient, "us-east5-model");
+
+    // Then: the requested location is used as-is, not the model's pinned region
+    assertThat(effectiveLocation).isEqualTo("europe-west1");
+  }
 }

@@ -9,13 +9,20 @@ public class AuthenticationConfig {
   private final String projectId;
   private final String location;
   private final String saKeyFile;
+  private final boolean skipModelRegionOverride;
 
   public AuthenticationConfig(AuthenticationType type, String apiKey, String projectId, String location, String saKeyFile) {
+    this(type, apiKey, projectId, location, saKeyFile, false);
+  }
+
+  public AuthenticationConfig(AuthenticationType type, String apiKey, String projectId, String location, String saKeyFile,
+      boolean skipModelRegionOverride) {
     this.type = type;
     this.apiKey = apiKey;
     this.projectId = projectId;
     this.location = location;
     this.saKeyFile = saKeyFile;
+    this.skipModelRegionOverride = skipModelRegionOverride;
   }
 
   public AuthenticationType getType() {
@@ -38,12 +45,25 @@ public class AuthenticationConfig {
     return saKeyFile;
   }
 
+  /**
+   * Whether a model's configured {@code .region} override should be ignored in favor of the explicit {@link #getLocation()}.
+   *
+   * <p>
+   * Used by per-region availability scans, which set {@link #getLocation()} to the specific region under test and must not have that
+   * silently redirected to a model-pinned region.
+   * </p>
+   */
+  public boolean isSkipModelRegionOverride() {
+    return skipModelRegionOverride;
+  }
+
   public static class Builder {
     private AuthenticationType type;
     private String apiKey;
     private String projectId;
     private String location;
     private String saKeyFile;
+    private boolean skipModelRegionOverride;
 
     public Builder withType(AuthenticationType type) {
       this.type = type;
@@ -70,6 +90,11 @@ public class AuthenticationConfig {
       return this;
     }
 
+    public Builder withSkipModelRegionOverride(boolean skipModelRegionOverride) {
+      this.skipModelRegionOverride = skipModelRegionOverride;
+      return this;
+    }
+
     public AuthenticationConfig build() {
       if (type == null) {
         throw new IllegalStateException("Authentication type must be provided");
@@ -91,7 +116,7 @@ public class AuthenticationConfig {
           throw new IllegalStateException("Unsupported authentication type: " + type);
       }
 
-      return new AuthenticationConfig(type, apiKey, projectId, location, saKeyFile);
+      return new AuthenticationConfig(type, apiKey, projectId, location, saKeyFile, skipModelRegionOverride);
     }
 
     private static void requireNonBlank(String value, String fieldName) {
