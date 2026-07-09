@@ -59,9 +59,6 @@ tools/gitleaks/*.zip
 tools/gitleaks/*.tar.gz
 !tools/gitleaks/.gitkeep
 
-### Obsolete local Talisman binary ###
-tools/talisman/talisman_*
-
 ### Test Result Files ###
 *.csv
 model-test-results_*.csv
@@ -70,7 +67,6 @@ region-discovery_*.csv
 
 ### Results Directory ###
 results/
-.talismanrc
 
 ### Runtime Results ###
 results/runtime-results-*.txt
