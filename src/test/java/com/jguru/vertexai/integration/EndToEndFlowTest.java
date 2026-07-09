@@ -36,7 +36,7 @@ public class EndToEndFlowTest {
     // Assert - Verify the complete flow worked
     assertNotNull(result, "Result should not be null");
     assertTrue(result.startsWith("SUCCESS:"), "Result should be formatted as success");
-    assertTrue(result.contains("gemini-1.5-pro-001"), "Result should contain resolved model name");
+    assertTrue(result.contains("gemini-3.1-pro-preview"), "Result should contain resolved model name");
     assertTrue(result.contains("Hello, Vertex AI!"), "Result should contain original prompt");
 
     // Additional assertion to ensure it's not the raw mock response
@@ -99,7 +99,7 @@ public class EndToEndFlowTest {
     // Assert - Verify that all layers work together despite dependency inversion
     assertNotNull(result);
     assertTrue(result.startsWith("SUCCESS:"), "Should return success format");
-    assertTrue(result.contains("gemini-1.5-pro-001"), "Should contain resolved model name");
+    assertTrue(result.contains("gemini-3.1-pro-preview"), "Should contain resolved model name");
     assertTrue(result.contains("Test prompt"), "Should contain original prompt");
 
     // The key assertion: The domain layer works with interface,
@@ -141,7 +141,7 @@ public class EndToEndFlowTest {
     // Check that the flow completed successfully (indicating proper boundaries)
     assertNotNull(result);
     assertTrue(result.startsWith("SUCCESS:"));
-    assertTrue(result.contains("gemini-1.5-pro-001"));
+    assertTrue(result.contains("gemini-3.1-pro-preview"));
     assertTrue(result.contains("Architecture test"));
 
     // Verify that the repository is from infrastructure but used by domain
@@ -178,7 +178,7 @@ public class EndToEndFlowTest {
     // Assert - Domain layer works independently
     assertNotNull(resolvedModel, "Domain service should work independently");
     assertEquals("gemini.pro", resolvedModel.getAlias());
-    assertEquals("gemini-1.5-pro-001", resolvedModel.getFullName());
+    assertEquals("gemini-3.1-pro-preview", resolvedModel.getFullName());
 
     // Verify domain validation
     assertTrue(modelResolutionService.isValidModelAlias("gemini.pro"), "Domain service validates correctly");

@@ -11,9 +11,9 @@ public class ModelRepositoryImpl implements ModelRepository {
   public ModelRepositoryImpl() {
     this.models = new HashMap<>();
     // Initialize with some default models
-    models.put("gemini.pro", new Model("gemini.pro", "gemini-1.5-pro-001"));
-    models.put("gpt4", new Model("gpt4", "gpt-4-turbo"));
-    models.put("claude", new Model("claude", "claude-3-opus"));
+    models.put("gemini.pro", new Model("gemini.pro", "gemini-3.1-pro-preview"));
+    models.put("gemini.flash", new Model("gemini.flash", "gemini-3.5-flash"));
+    models.put("claude", new Model("claude", "claude-opus-4-8@default"));
   }
 
   @Override

@@ -20,7 +20,7 @@ public class ModelRepositoryImplTest {
     // Assert
     assertNotNull(model);
     assertEquals("gemini.pro", model.getAlias());
-    assertEquals("gemini-1.5-pro-001", model.getFullName());
+    assertEquals("gemini-3.1-pro-preview", model.getFullName());
   }
 
   @Test

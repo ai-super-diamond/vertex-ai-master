@@ -61,7 +61,7 @@ public class IntegrationTest {
     // Assert - Verify that domain layer works independently
     assertNotNull(resolvedModel, "Model should be resolved by domain service");
     assertEquals("gemini.pro", resolvedModel.getAlias(), "Resolved model should have correct alias");
-    assertEquals("gemini-1.5-pro-001", resolvedModel.getFullName(), "Resolved model should have correct full name");
+    assertEquals("gemini-3.1-pro-preview", resolvedModel.getFullName(), "Resolved model should have correct full name");
     assertFalse(resolvedModel.isGlobal(), "Resolved model should have correct global setting");
   }
 

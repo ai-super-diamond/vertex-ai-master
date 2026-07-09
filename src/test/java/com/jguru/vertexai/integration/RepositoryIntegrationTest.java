@@ -19,7 +19,7 @@ public class RepositoryIntegrationTest {
     Model existingModel = repository.findByAlias("gemini.pro");
     assertNotNull(existingModel, "Initial model should exist");
     assertEquals("gemini.pro", existingModel.getAlias());
-    assertEquals("gemini-1.5-pro-001", existingModel.getFullName());
+    assertEquals("gemini-3.1-pro-preview", existingModel.getFullName());
 
     // Act & Assert - Verify existence check
     boolean exists = repository.existsByAlias("gemini.pro");
@@ -55,7 +55,7 @@ public class RepositoryIntegrationTest {
 
     // Act & Assert - Valid aliases
     assertTrue(repository.existsByAlias("gemini.pro"), "Valid alias should exist");
-    assertTrue(repository.existsByAlias("gpt4"), "Valid alias should exist");
+    assertTrue(repository.existsByAlias("gemini.flash"), "Valid alias should exist");
     assertTrue(repository.existsByAlias("claude"), "Valid alias should exist");
 
     // Act & Assert - Invalid aliases
