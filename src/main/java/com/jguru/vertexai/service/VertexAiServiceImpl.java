@@ -67,8 +67,13 @@ public class VertexAiServiceImpl implements VertexAiService {
       ModelClient client = modelClientFactory.createClient(request.getAuthenticationConfig());
       // Generate content using the client
       String response = client.callVertexAi(resolvedModel, request.getText());
-      result = GenerationResult.builder().withText(response).build();
-      logger.info("Successfully generated content using model: {}", resolvedModel);
+      if (response != null && !response.isEmpty()) {
+        result = GenerationResult.success(response);
+        logger.info("Successfully generated content using model: {}", resolvedModel);
+      } else {
+        result = GenerationResult.failure("Empty response from model: " + resolvedModel);
+        logger.error("Empty response generating content for model '{}'", resolvedModel);
+      }
     } catch (ApiCallException e) {
       result = GenerationResult.failure(e.getMessage());
       logger.error("Error generating content for model '{}': {}", resolvedModel, e.getMessage(), e);
@@ -100,10 +105,7 @@ public class VertexAiServiceImpl implements VertexAiService {
           results.put(region, "ERROR: Empty response");
         }
       } catch (ApiCallException e) {
-        String errorMsg = e.getMessage();
-        // Extract meaningful error info using ErrorType enum
-        ErrorType errorType = ErrorType.fromMessage(errorMsg);
-        String formattedError = errorType.formatMessage(errorMsg);
+        String formattedError = formatApiCallException(e);
         if (debugMode) {
           formattedError = buildDebugError(formattedError, e);
         }
@@ -120,6 +122,32 @@ public class VertexAiServiceImpl implements VertexAiService {
     }
 
     return new RegionCheckResult(results);
+  }
+
+  /**
+   * Formats an ApiCallException using the error type the client already categorized from the HTTP-level failure, instead of re-deriving a
+   * (weaker) category by scanning the message text for status-code-like digits.
+   *
+   * <p>
+   * Falls back to message-based classification only when the client itself could not categorize the failure ({@code UNKNOWN}).
+   * </p>
+   */
+  private String formatApiCallException(ApiCallException e) {
+    String errorMsg = e.getMessage();
+    switch (e.getErrorType()) {
+      case NOT_FOUND :
+        return ErrorType.NOT_FOUND_404.getDisplayMessage();
+      case PERMISSION_DENIED :
+        return ErrorType.PERMISSION_DENIED_403.getDisplayMessage();
+      case INVALID_REQUEST :
+        return ErrorType.BAD_REQUEST_400.getDisplayMessage();
+      case RATE_LIMITED :
+        return ErrorType.RATE_LIMITED_429.getDisplayMessage();
+      case NETWORK_ERROR :
+        return ErrorType.NETWORK_ERROR.getDisplayMessage();
+      default :
+        return ErrorType.fromMessage(errorMsg).formatMessage(errorMsg);
+    }
   }
 
   private AuthenticationConfig buildRegionAuthenticationConfig(AuthenticationConfig baseConfig, String projectId, String saKeyFile,
