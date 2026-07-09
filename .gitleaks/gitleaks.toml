@@ -1,0 +1,12 @@
+# Keep all built-in Gitleaks rules active and add repo-specific detectors on top.
+[extend]
+useDefault = true
+
+# Z.AI / Zhipu BigModel API key: 32 hex chars, dot, 16 alphanumerics
+[[rules]]
+id          = "z-ai-api-key"
+description = "Z.AI (Zhipu BigModel) API key"
+regex       = '''\b[0-9a-f]{32}\.[A-Za-z0-9]{16}\b'''
+keywords    = []
+entropy     = 3
+tags        = ["secret", "api-key", "z-ai"]

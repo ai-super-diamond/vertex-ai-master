@@ -32,6 +32,7 @@ else
   ARCHIVE_EXT="tar.gz"
 fi
 BINARY="$GITLEAKS_DIR/gitleaks${EXT}"
+CONFIG="$REPO_ROOT/.gitleaks/gitleaks.toml"
 
 if [ ! -f "$BINARY" ]; then
   echo "[INFO] Downloading Gitleaks $OS/$ARCH binary..."
@@ -91,4 +92,10 @@ export GIT_CONFIG_KEY_1=color.diff
 export GIT_CONFIG_VALUE_1=false
 
 echo "Running Gitleaks Secret Scanner..."
-"$BINARY" git --pre-commit --redact --staged --verbose
+CONFIG_ARGS=()
+if [ -f "$CONFIG" ]; then
+  CONFIG_ARGS=(--config "$CONFIG")
+else
+  echo "[WARN] Gitleaks config $CONFIG not found; using built-in rules only."
+fi
+"$BINARY" git --pre-commit --redact --staged --verbose "${CONFIG_ARGS[@]}"
