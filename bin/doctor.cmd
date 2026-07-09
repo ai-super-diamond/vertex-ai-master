@@ -115,13 +115,13 @@ if not exist "%SCRIPT_DIR%\results" (
     echo [ OK ] results\ directory present.
 )
 
-REM --- Talisman hook ---
+REM --- Gitleaks hook ---
 for /f "delims=" %%H in ('git config core.hooksPath 2^>nul') do set HOOKS_PATH=%%H
 if not defined HOOKS_PATH set HOOKS_PATH=.git/hooks
 if exist "%PROJECT_ROOT%\%HOOKS_PATH%\pre-commit" (
-    echo [ OK ] Talisman pre-commit hook installed.
+    echo [ OK ] Gitleaks pre-commit hook installed.
 ) else (
-    echo [WARN] Talisman hook not configured. Run: git config core.hooksPath hooks
+    echo [WARN] Gitleaks hook not configured. Run: git config core.hooksPath hooks
     set /a WARN_COUNT+=1
 )
 

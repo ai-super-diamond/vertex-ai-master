@@ -1,48 +1,94 @@
 #!/bin/bash
-# Talisman Pre-Commit Hook (cross-platform, downloads binary on-demand)
+# Gitleaks Pre-Commit Hook (cross-platform, downloads binary on-demand)
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-TALISMAN_DIR="$REPO_ROOT/tools/talisman"
+GITLEAKS_DIR="$REPO_ROOT/tools/gitleaks"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-ARCH="$(uname -m)"
+ARCH="$(uname -m | tr '[:upper:]' '[:lower:]')"
 
 case "$OS" in
   mingw*|msys*|cygwin*) OS="windows" ;;
+  darwin*) OS="darwin" ;;
+  linux*) OS="linux" ;;
+  *)
+    echo "[WARN] Unsupported OS for Gitleaks download: $OS. Skipping."
+    exit 0
+    ;;
 esac
 case "$ARCH" in
-  x86_64|amd64) ARCH="amd64" ;;
+  x86_64|amd64) ARCH="x64" ;;
   aarch64|arm64) ARCH="arm64" ;;
+  *)
+    echo "[WARN] Unsupported architecture for Gitleaks download: $ARCH. Skipping."
+    exit 0
+    ;;
 esac
 
-[ "$OS" = "windows" ] && EXT=".exe" || EXT=""
-BINARY="$TALISMAN_DIR/talisman_${OS}_${ARCH}${EXT}"
+if [ "$OS" = "windows" ]; then
+  EXT=".exe"
+  ARCHIVE_EXT="zip"
+else
+  EXT=""
+  ARCHIVE_EXT="tar.gz"
+fi
+BINARY="$GITLEAKS_DIR/gitleaks${EXT}"
 
 if [ ! -f "$BINARY" ]; then
-  echo "[INFO] Downloading Talisman $OS/$ARCH binary..."
-  mkdir -p "$TALISMAN_DIR"
-  VERSION=$(curl -s "https://api.github.com/repos/thoughtworks/talisman/releases/latest" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
-  if [ -z "$VERSION" ]; then
-    VERSION="v1.37.0"
-  fi
-  URL="https://github.com/thoughtworks/talisman/releases/download/${VERSION}/talisman_${OS}_${ARCH}${EXT}"
-  if curl -sL "$URL" -o "$BINARY" 2>/dev/null && [ -f "$BINARY" ]; then
-    [ "$OS" != "windows" ] && chmod +x "$BINARY" 2>/dev/null || true
-  else
-    echo "[WARN] Talisman binary download failed for $OS/$ARCH. Skipping."
-    rm -f "$BINARY" 2>/dev/null
+  echo "[INFO] Downloading Gitleaks $OS/$ARCH binary..."
+  mkdir -p "$GITLEAKS_DIR"
+
+  TAG=$(curl -s "https://api.github.com/repos/gitleaks/gitleaks/releases/latest" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1)
+  if [ -z "$TAG" ]; then
+    echo "[WARN] Unable to determine latest Gitleaks release. Skipping."
     exit 0
   fi
+
+  VERSION="${TAG#v}"
+  ASSET="gitleaks_${VERSION}_${OS}_${ARCH}.${ARCHIVE_EXT}"
+  ARCHIVE="$GITLEAKS_DIR/$ASSET"
+  URL="https://github.com/gitleaks/gitleaks/releases/download/${TAG}/${ASSET}"
+
+  if ! curl -sL "$URL" -o "$ARCHIVE" 2>/dev/null || [ ! -s "$ARCHIVE" ]; then
+    echo "[WARN] Gitleaks archive download failed for $OS/$ARCH. Skipping."
+    rm -f "$ARCHIVE" 2>/dev/null
+    exit 0
+  fi
+
+  if [ "$OS" = "windows" ]; then
+    if ! command -v unzip >/dev/null 2>&1; then
+      echo "[WARN] unzip is required to extract Gitleaks on Windows. Skipping."
+      rm -f "$ARCHIVE" 2>/dev/null
+      exit 0
+    fi
+    if ! unzip -p "$ARCHIVE" "gitleaks.exe" > "$BINARY" 2>/dev/null; then
+      echo "[WARN] Failed to extract Gitleaks from $ASSET. Skipping."
+      rm -f "$ARCHIVE" "$BINARY" 2>/dev/null
+      exit 0
+    fi
+  else
+    if ! command -v tar >/dev/null 2>&1; then
+      echo "[WARN] tar is required to extract Gitleaks on $OS. Skipping."
+      rm -f "$ARCHIVE" 2>/dev/null
+      exit 0
+    fi
+    if ! tar -xzf "$ARCHIVE" -C "$GITLEAKS_DIR" "gitleaks" 2>/dev/null; then
+      echo "[WARN] Failed to extract Gitleaks from $ASSET. Skipping."
+      rm -f "$ARCHIVE" "$BINARY" 2>/dev/null
+      exit 0
+    fi
+    chmod +x "$BINARY" 2>/dev/null || true
+  fi
+
+  rm -f "$ARCHIVE" 2>/dev/null
 fi
 
-# Talisman parses `git diff --staged` output, so force plain (uncolored) diff
-# output. A global `color.ui = always` (or `color.diff = always`) would
-# otherwise embed ANSI escapes that Talisman cannot parse, causing it to scan
-# zero additions and silently let secrets through.
+# Gitleaks shells out to `git diff --staged`; force plain diff output so a
+# global `color.ui = always` does not inject ANSI escapes into the patch stream.
 export GIT_CONFIG_COUNT=2
 export GIT_CONFIG_KEY_0=color.ui
 export GIT_CONFIG_VALUE_0=false
 export GIT_CONFIG_KEY_1=color.diff
 export GIT_CONFIG_VALUE_1=false
 
-echo "Running Talisman Secret Scanner..."
-"$BINARY" --githook pre-commit
+echo "Running Gitleaks Secret Scanner..."
+"$BINARY" git --pre-commit --redact --staged --verbose
