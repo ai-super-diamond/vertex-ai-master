@@ -17,12 +17,13 @@ REM ============================================================================
 
 echo --- Vertex AI Master: Rebuild Script ---
 
-REM Configure Maven path (PowerShell requires .cmd)
-set "MAVEN_CMD=d:\java\maven\bin\mvn.cmd"
+REM Resolve Maven from PATH so the script works across developer machines.
+set "MAVEN_CMD=mvn.cmd"
 
-if not exist "%MAVEN_CMD%" (
-    echo ERROR: Maven not found at "%MAVEN_CMD%".
-    echo Please adjust MAVEN_CMD to your Maven location.
+where "%MAVEN_CMD%" >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Maven was not found on PATH.
+    echo Install Maven or add its bin directory to PATH.
     exit /b 1
 )
 
@@ -33,7 +34,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "JAR=target\demo-0.0.1-SNAPSHOT.jar"
+set "JAR=target\vertex-1.0.2.jar"
 if not exist "%JAR%" (
     echo ERROR: Build succeeded but JAR not found: "%JAR%"
     exit /b 1
@@ -43,6 +44,14 @@ echo --- Build complete ---
 echo JAR: "%JAR%"
 
 echo.
+echo --- Copying model configuration ---
+copy /Y ".\src\main\resources\models.properties" models.properties >nul
+if errorlevel 1 (
+    echo ERROR: Failed to copy models.properties.
+    exit /b 1
+)
+
+echo.
 echo --- Smoke test: CLI help ---
 if exist "vertex.cmd" (
     call vertex.cmd --help
@@ -50,13 +59,12 @@ if exist "vertex.cmd" (
     echo NOTE: vertex.cmd not found; running JAR directly:
     java -jar "%JAR%" --help
 )
+if errorlevel 1 (
+    echo ERROR: Smoke test failed.
+    exit /b 1
+)
 
 echo.
 echo --- Done ---
-
-
-
-if exist models.properties del models.properties >nul 2>&1
-copy ".\src\main\resources\models.properties" models.properties
 
 pause
